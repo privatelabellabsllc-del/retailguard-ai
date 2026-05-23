@@ -106,33 +106,33 @@ export default function TrafficPage() {
     <div className="min-h-screen p-8 space-y-6">
       {/* Header */}
       <div className="mb-2">
-        <h1 className="text-[28px] font-bold text-white tracking-tight">Smart Traffic</h1>
-        <p className="text-[13px] text-white/40 mt-1">Real-time foot traffic intelligence</p>
+        <h1 className="text-[28px] font-bold text-gray-900 tracking-tight">Smart Traffic</h1>
+        <p className="text-[13px] text-gray-900/40 mt-1">Real-time foot traffic intelligence</p>
       </div>
 
       {/* Hero Stat */}
       <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.05] rounded-2xl p-8 transition-all duration-300">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="text-center md:text-left">
-            <p className="text-[13px] text-white/40 font-medium uppercase tracking-wider mb-2">Today's Visitors</p>
-            <div className={`text-6xl font-bold text-white tracking-tight transition-opacity duration-500 ${loading ? 'opacity-40' : 'opacity-100'}`}>
+            <p className="text-[13px] text-gray-900/40 font-medium uppercase tracking-wider mb-2">Today's Visitors</p>
+            <div className={`text-6xl font-bold text-gray-900 tracking-tight transition-opacity duration-500 ${loading ? 'opacity-40' : 'opacity-100'}`}>
               {animatedTotal.toLocaleString()}
             </div>
           </div>
           <div className="flex gap-8">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-400">{uniqueVisitors.toLocaleString()}</div>
-              <p className="text-[12px] text-white/30 mt-1">Unique</p>
+              <div className="text-2xl font-bold text-blue-600">{uniqueVisitors.toLocaleString()}</div>
+              <p className="text-[12px] text-gray-900/30 mt-1">Unique</p>
             </div>
             <div className="w-px bg-white/[0.06]" />
             <div className="text-center">
-              <div className="text-2xl font-bold text-purple-400">{returningVisitors.toLocaleString()}</div>
-              <p className="text-[12px] text-white/30 mt-1">Returning</p>
+              <div className="text-2xl font-bold text-purple-600">{returningVisitors.toLocaleString()}</div>
+              <p className="text-[12px] text-gray-900/30 mt-1">Returning</p>
             </div>
             <div className="w-px bg-white/[0.06]" />
             <div className="text-center">
               <div className="text-2xl font-bold text-emerald-400">{currentlyInStore}</div>
-              <p className="text-[12px] text-white/30 mt-1">In Store Now</p>
+              <p className="text-[12px] text-gray-900/30 mt-1">In Store Now</p>
             </div>
           </div>
         </div>
@@ -145,13 +145,13 @@ export default function TrafficPage() {
             type="date"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="bg-white/[0.04] border border-white/[0.08] text-white/80 text-[13px] rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all duration-200 [color-scheme:dark]"
+            className="bg-white/[0.04] border border-white/[0.08] text-gray-900/80 text-[13px] rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all duration-200 [color-scheme:dark]"
           />
         </div>
         <select
           value={locationFilter}
           onChange={(e) => setLocationFilter(e.target.value)}
-          className="bg-white/[0.04] border border-white/[0.08] text-white/80 text-[13px] rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all duration-200 appearance-none pr-8 cursor-pointer"
+          className="bg-white/[0.04] border border-white/[0.08] text-gray-900/80 text-[13px] rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all duration-200 appearance-none pr-8 cursor-pointer"
           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='rgba(255,255,255,0.3)' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
         >
           <option value="all">All Locations</option>
@@ -163,18 +163,18 @@ export default function TrafficPage() {
 
       {/* Hourly Breakdown */}
       <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.05] rounded-2xl p-6 transition-all duration-300">
-        <h3 className="text-[15px] font-semibold text-white mb-1">Hourly Breakdown</h3>
-        <p className="text-[12px] text-white/30 mb-6">Foot traffic distribution throughout the day</p>
+        <h3 className="text-[15px] font-semibold text-gray-900 mb-1">Hourly Breakdown</h3>
+        <p className="text-[12px] text-gray-900/30 mb-6">Foot traffic distribution throughout the day</p>
         <div className="space-y-2">
           {hourlyData.map((h, i) => (
             <div key={i} className="flex items-center gap-3 group">
-              <span className="text-[12px] text-white/30 w-10 text-right font-mono">{h.hour}</span>
+              <span className="text-[12px] text-gray-900/30 w-10 text-right font-mono">{h.hour}</span>
               <div className="flex-1 h-8 bg-white/[0.02] rounded-lg overflow-hidden relative">
                 <div
                   className={`h-full rounded-lg transition-all duration-700 ease-out ${h.isPeak ? 'bg-gradient-to-r from-blue-500 to-cyan-400' : 'bg-blue-500/40'} group-hover:brightness-125`}
                   style={{ width: `${(h.count / maxHourly) * 100}%`, transitionDelay: `${i * 40}ms` }}
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-white/50 font-mono">
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-900/50 font-mono">
                   {h.count}
                 </span>
               </div>
@@ -197,8 +197,8 @@ export default function TrafficPage() {
         ].map((stat, i) => (
           <div key={i} className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.05] rounded-2xl p-5 transition-all duration-300 hover:bg-white/[0.06] text-center">
             <span className="text-2xl">{stat.icon}</span>
-            <div className="text-xl font-bold text-white mt-3 mb-1">{stat.value || '—'}</div>
-            <p className="text-[12px] text-white/30">{stat.label}</p>
+            <div className="text-xl font-bold text-gray-900 mt-3 mb-1">{stat.value || '—'}</div>
+            <p className="text-[12px] text-gray-900/30">{stat.label}</p>
           </div>
         ))}
       </div>
@@ -207,10 +207,10 @@ export default function TrafficPage() {
       <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.05] rounded-2xl p-6 transition-all duration-300">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-[15px] font-semibold text-white">Known Staff</h3>
-            <p className="text-[12px] text-white/30 mt-0.5">Excluded from traffic count</p>
+            <h3 className="text-[15px] font-semibold text-gray-900">Known Staff</h3>
+            <p className="text-[12px] text-gray-900/30 mt-0.5">Excluded from traffic count</p>
           </div>
-          <span className="text-[12px] text-white/20 bg-white/[0.04] px-3 py-1 rounded-full">
+          <span className="text-[12px] text-gray-900/20 bg-white/[0.04] px-3 py-1 rounded-full">
             {staff.length} members
           </span>
         </div>
@@ -224,8 +224,8 @@ export default function TrafficPage() {
                 {member.avatar}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] text-white/80 font-medium truncate">{member.name}</p>
-                <p className="text-[11px] text-white/30">{member.role}</p>
+                <p className="text-[13px] text-gray-900/80 font-medium truncate">{member.name}</p>
+                <p className="text-[11px] text-gray-900/30">{member.role}</p>
               </div>
               {member.excluded && (
                 <div className="flex-shrink-0">

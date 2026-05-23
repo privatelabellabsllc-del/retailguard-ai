@@ -55,36 +55,36 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
   };
 
   const threatColor = {
-    0: 'text-gray-400',
-    1: 'text-yellow-400',
+    0: 'text-gray-500',
+    1: 'text-yellow-600',
     2: 'text-orange-400',
-    3: 'text-red-400',
+    3: 'text-red-600',
     4: 'text-red-500',
-  }[alert.person_threat_level] || 'text-gray-400';
+  }[alert.person_threat_level] || 'text-gray-500';
 
   return (
     <>
       <div className={`alert-panel ${isCritical ? 'alert-critical' : ''}`}>
         {/* Header */}
-        <div className={`p-4 border-b border-gray-800 ${isCritical ? 'bg-red-950/50' : 'bg-gray-900'}`}>
+        <div className={`p-4 border-b border-gray-200 ${isCritical ? 'bg-red-950/50' : 'bg-white'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <AlertTriangle className={`w-5 h-5 ${isCritical ? 'text-red-500' : 'text-amber-500'}`} />
               <h2 className="font-bold text-lg">{alert.title}</h2>
             </div>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-300">
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-600">
               <X className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-sm text-gray-400 mt-1">{alert.message}</p>
+          <p className="text-sm text-gray-500 mt-1">{alert.message}</p>
         </div>
 
         <div className="overflow-y-auto" style={{ height: 'calc(100vh - 80px)' }}>
           {/* Person Info */}
-          <div className="p-4 border-b border-gray-800">
+          <div className="p-4 border-b border-gray-200">
             <div className="flex gap-4">
               {/* Portrait */}
-              <div className="w-24 h-24 bg-gray-800 rounded-lg overflow-hidden shrink-0 flex items-center justify-center">
+              <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden shrink-0 flex items-center justify-center">
                 {alert.best_portrait_path ? (
                   <img src={alert.best_portrait_path} alt="Subject" className="w-full h-full object-cover" />
                 ) : (
@@ -110,7 +110,7 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
                 <p className={`text-sm font-medium ${threatColor}`}>
                   Threat Level: {'🔴'.repeat(alert.person_threat_level)}{'⚪'.repeat(4 - alert.person_threat_level)}
                 </p>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-500">
                   {alert.person_total_thefts} confirmed theft{alert.person_total_thefts !== 1 ? 's' : ''}
                 </p>
               </div>
@@ -119,19 +119,19 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
 
           {/* Match Confidence */}
           {alert.match_confidence && (
-            <div className="p-4 border-b border-gray-800">
-              <h4 className="text-sm font-medium text-gray-400 mb-2">Identity Match</h4>
+            <div className="p-4 border-b border-gray-200">
+              <h4 className="text-sm font-medium text-gray-500 mb-2">Identity Match</h4>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Overall Confidence</span>
                   <span className={`font-bold ${
-                    alert.match_confidence > 0.9 ? 'text-green-400' :
-                    alert.match_confidence > 0.8 ? 'text-yellow-400' : 'text-orange-400'
+                    alert.match_confidence > 0.9 ? 'text-green-600' :
+                    alert.match_confidence > 0.8 ? 'text-yellow-600' : 'text-orange-400'
                   }`}>
                     {(alert.match_confidence * 100).toFixed(1)}%
                   </span>
                 </div>
-                <div className="w-full bg-gray-800 rounded-full h-2">
+                <div className="w-full bg-gray-100 rounded-full h-2">
                   <div
                     className={`h-2 rounded-full ${
                       alert.match_confidence > 0.9 ? 'bg-green-500' :
@@ -143,25 +143,25 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
                 {alert.match_details && (
                   <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
                     {alert.match_details.face_score != null && (
-                      <div className="bg-gray-800/50 p-2 rounded">
+                      <div className="bg-gray-100/60 p-2 rounded">
                         <span className="text-gray-500">Face</span>
                         <span className="float-right font-medium">{(alert.match_details.face_score * 100).toFixed(0)}%</span>
                       </div>
                     )}
                     {alert.match_details.body_score != null && (
-                      <div className="bg-gray-800/50 p-2 rounded">
+                      <div className="bg-gray-100/60 p-2 rounded">
                         <span className="text-gray-500">Body</span>
                         <span className="float-right font-medium">{(alert.match_details.body_score * 100).toFixed(0)}%</span>
                       </div>
                     )}
                     {alert.match_details.gait_score != null && (
-                      <div className="bg-gray-800/50 p-2 rounded">
+                      <div className="bg-gray-100/60 p-2 rounded">
                         <span className="text-gray-500">Gait</span>
                         <span className="float-right font-medium">{(alert.match_details.gait_score * 100).toFixed(0)}%</span>
                       </div>
                     )}
                     {alert.match_details.height_match != null && (
-                      <div className="bg-gray-800/50 p-2 rounded">
+                      <div className="bg-gray-100/60 p-2 rounded">
                         <span className="text-gray-500">Height</span>
                         <span className="float-right font-medium">{alert.match_details.height_match ? '✅' : '❌'}</span>
                       </div>
@@ -174,8 +174,8 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
 
           {/* Previous Theft Video */}
           {alert.reference_clip_url && (
-            <div className="p-4 border-b border-gray-800">
-              <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+            <div className="p-4 border-b border-gray-200">
+              <h4 className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-2">
                 <Video className="w-4 h-4" /> Previous Theft Recording
               </h4>
               <div className="bg-black rounded-lg overflow-hidden">
@@ -193,20 +193,20 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
           )}
 
           {/* Notes */}
-          <div className="p-4 border-b border-gray-800">
-            <label className="text-sm font-medium text-gray-400 mb-1 block">Action Notes</label>
+          <div className="p-4 border-b border-gray-200">
+            <label className="text-sm font-medium text-gray-500 mb-1 block">Action Notes</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add notes about this encounter..."
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500"
+              className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-600 focus:outline-none focus:border-blue-500"
               rows={2}
             />
           </div>
 
           {/* === ACTION BUTTONS === */}
           <div className="p-4 space-y-3">
-            <h4 className="text-sm font-bold text-gray-300 uppercase tracking-wider">Take Action</h4>
+            <h4 className="text-sm font-bold text-gray-600 uppercase tracking-wider">Take Action</h4>
             
             {/* Primary actions — the 3 main buttons */}
             <div className="grid grid-cols-1 gap-2">
@@ -214,7 +214,7 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
               <button
                 onClick={() => handleAction('call_police')}
                 disabled={actionLoading !== null}
-                className="flex items-center gap-3 w-full bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-bold text-base transition-colors disabled:opacity-50"
+                className="flex items-center gap-3 w-full bg-red-600 hover:bg-red-700 text-gray-900 px-4 py-3 rounded-lg font-bold text-base transition-colors disabled:opacity-50"
               >
                 <Phone className="w-5 h-5" />
                 🚔 Call Police — 911
@@ -225,7 +225,7 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
               <button
                 onClick={() => handleAction('let_go')}
                 disabled={actionLoading !== null}
-                className="flex items-center gap-3 w-full bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg font-medium text-base transition-colors disabled:opacity-50"
+                className="flex items-center gap-3 w-full bg-gray-200 hover:bg-gray-600 text-gray-900 px-4 py-3 rounded-lg font-medium text-base transition-colors disabled:opacity-50"
               >
                 <HandMetal className="w-5 h-5" />
                 🤚 Let Them Go
@@ -235,7 +235,7 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
               <button
                 onClick={() => handleAction('blacklist')}
                 disabled={actionLoading !== null}
-                className="flex items-center gap-3 w-full bg-orange-600 hover:bg-orange-700 text-white px-4 py-3 rounded-lg font-bold text-base transition-colors disabled:opacity-50"
+                className="flex items-center gap-3 w-full bg-orange-600 hover:bg-orange-700 text-gray-900 px-4 py-3 rounded-lg font-bold text-base transition-colors disabled:opacity-50"
               >
                 <Ban className="w-5 h-5" />
                 ⛔ Blacklist This Person
@@ -263,8 +263,8 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
 
           {/* Confirmation dialog */}
           {showConfirm && (
-            <div className="p-4 mx-4 mb-4 bg-amber-900/30 border border-amber-700 rounded-lg">
-              <p className="text-sm text-amber-300 mb-3">
+            <div className="p-4 mx-4 mb-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-500 mb-3">
                 {showConfirm === 'blacklist'
                   ? 'Are you sure you want to BLACKLIST this person? They will be flagged on every future visit.'
                   : 'This will display the theft video on the customer-facing screen. Proceed?'}
@@ -288,17 +288,17 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
       {/* 911 Call Overlay */}
       {show911 && (
         <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center">
-          <div className="bg-gray-900 border-2 border-red-600 rounded-2xl p-8 max-w-md w-full mx-4 text-center">
+          <div className="bg-white border-2 border-red-600 rounded-2xl p-8 max-w-md w-full mx-4 text-center">
             <div className="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-10 h-10 text-white" />
+              <Shield className="w-10 h-10 text-gray-900" />
             </div>
-            <h2 className="text-3xl font-black text-white mb-2">CALL 911</h2>
-            <p className="text-gray-400 mb-6">
+            <h2 className="text-3xl font-black text-gray-900 mb-2">CALL 911</h2>
+            <p className="text-gray-500 mb-6">
               Police badge verified. An evidence package with video, photos, and physical description has been prepared.
             </p>
             <a
               href="tel:911"
-              className="block w-full bg-red-600 hover:bg-red-700 text-white text-xl font-bold py-4 rounded-xl mb-3 transition-colors"
+              className="block w-full bg-red-600 hover:bg-red-700 text-gray-900 text-xl font-bold py-4 rounded-xl mb-3 transition-colors"
             >
               📞 Dial 911 Now
             </a>
@@ -307,13 +307,13 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
                 setShow911(false);
                 await handleAction('call_police');
               }}
-              className="block w-full bg-gray-800 hover:bg-gray-700 text-gray-300 py-3 rounded-xl transition-colors"
+              className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-600 py-3 rounded-xl transition-colors"
             >
               Log as Police Called
             </button>
             <button
               onClick={() => setShow911(false)}
-              className="text-gray-600 text-sm mt-3 hover:text-gray-400"
+              className="text-gray-600 text-sm mt-3 hover:text-gray-500"
             >
               Cancel
             </button>

@@ -30,10 +30,10 @@ interface PerformanceData {
 }
 
 const statusBadge: Record<string, { bg: string; text: string }> = {
-  pending: { bg: 'bg-yellow-500/20', text: 'text-yellow-400' },
-  approved: { bg: 'bg-green-500/20', text: 'text-green-400' },
-  sent: { bg: 'bg-blue-500/20', text: 'text-blue-400' },
-  rejected: { bg: 'bg-red-500/20', text: 'text-red-400' },
+  pending: { bg: 'bg-yellow-500/20', text: 'text-yellow-600' },
+  approved: { bg: 'bg-green-500/20', text: 'text-green-600' },
+  sent: { bg: 'bg-blue-500/20', text: 'text-blue-600' },
+  rejected: { bg: 'bg-red-500/20', text: 'text-red-600' },
 };
 
 function ScoreRing({ score, size = 160 }: { score: number; size?: number }) {
@@ -71,7 +71,7 @@ function ScoreRing({ score, size = 160 }: { score: number; size?: number }) {
         <span className="text-4xl font-bold tracking-tight" style={{ color }}>
           {score}
         </span>
-        <span className="text-xs text-white/40 mt-0.5">Overall</span>
+        <span className="text-xs text-gray-900/40 mt-0.5">Overall</span>
       </div>
     </div>
   );
@@ -93,10 +93,10 @@ function Sparkline({ bars }: { bars: number[] }) {
 }
 
 function TrendArrow({ value }: { value: number }) {
-  if (value === 0) return <span className="text-white/30 text-xs">—</span>;
+  if (value === 0) return <span className="text-gray-900/30 text-xs">—</span>;
   const isUp = value > 0;
   return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${isUp ? 'text-green-400' : 'text-red-400'}`}>
+    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${isUp ? 'text-green-600' : 'text-red-600'}`}>
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className={isUp ? '' : 'rotate-180'}>
         <path d="M5 2l3.5 5H1.5L5 2z" fill="currentColor" />
       </svg>
@@ -188,7 +188,7 @@ export default function PerformancePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#1C1C1E] text-white">
+    <div className="min-h-screen bg-[#F5F5F7] text-gray-900">
       {/* Header */}
       <div className="px-8 pt-8 pb-6">
         <div className="flex items-center justify-between mb-6">
@@ -201,8 +201,8 @@ export default function PerformancePage() {
                 onClick={() => setAutoSendMode(mode)}
                 className={`px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
                   autoSendMode === mode
-                    ? 'bg-blue-500 text-white shadow-lg'
-                    : 'text-white/50 hover:text-white/70'
+                    ? 'bg-blue-500 text-gray-900 shadow-sm'
+                    : 'text-gray-900/50 hover:text-gray-900/70'
                 }`}
               >
                 {autoModeLabels[mode]}
@@ -216,10 +216,10 @@ export default function PerformancePage() {
           <select
             value={selectedClerkId}
             onChange={(e) => setSelectedClerkId(e.target.value)}
-            className="appearance-none bg-white/[0.05] border border-white/[0.1] rounded-xl px-4 py-2.5 pr-10 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all duration-200"
+            className="appearance-none bg-white/[0.05] border border-white/[0.1] rounded-xl px-4 py-2.5 pr-10 text-sm text-gray-900 focus:outline-none focus:border-blue-500/50 transition-all duration-200"
           >
             {clerks.map((c) => (
-              <option key={c.id} value={c.id} className="bg-[#2C2C2E]">
+              <option key={c.id} value={c.id} className="bg-white">
                 {c.fullName}
               </option>
             ))}
@@ -251,7 +251,7 @@ export default function PerformancePage() {
                     key={i}
                     className="bg-white/[0.05] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-4 hover:bg-white/[0.07] transition-all duration-200"
                   >
-                    <p className="text-xs text-white/40 font-medium uppercase tracking-wider mb-2">
+                    <p className="text-xs text-gray-900/40 font-medium uppercase tracking-wider mb-2">
                       {metric.label}
                     </p>
                     <div className="flex items-end justify-between mb-3">
@@ -267,10 +267,10 @@ export default function PerformancePage() {
 
           {/* Weekly Reviews */}
           <div className="px-8 pb-8">
-            <h2 className="text-xl font-semibold mb-4 text-white/90">Weekly Reviews</h2>
+            <h2 className="text-xl font-semibold mb-4 text-gray-900/90">Weekly Reviews</h2>
             <div className="space-y-3">
               {reviews.length === 0 ? (
-                <div className="bg-white/[0.05] rounded-2xl p-8 text-center text-white/30">
+                <div className="bg-white/[0.05] rounded-2xl p-8 text-center text-gray-900/30">
                   No reviews available
                 </div>
               ) : (
@@ -292,12 +292,12 @@ export default function PerformancePage() {
                             📋
                           </div>
                           <div>
-                            <p className="font-medium text-white/90">Week of {review.weekOf}</p>
+                            <p className="font-medium text-gray-900/90">Week of {review.weekOf}</p>
                             <div className="flex items-center gap-2 mt-0.5">
                               <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
                                 {review.status.charAt(0).toUpperCase() + review.status.slice(1)}
                               </span>
-                              <span className="text-xs text-white/40">Score: {review.overallScore}</span>
+                              <span className="text-xs text-gray-900/40">Score: {review.overallScore}</span>
                             </div>
                           </div>
                         </div>
@@ -306,7 +306,7 @@ export default function PerformancePage() {
                           height="16"
                           viewBox="0 0 16 16"
                           fill="none"
-                          className={`text-white/30 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                          className={`text-gray-900/30 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                         >
                           <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
@@ -322,11 +322,11 @@ export default function PerformancePage() {
                           {/* Scores */}
                           {review.scores && Object.keys(review.scores).length > 0 && (
                             <div>
-                              <p className="text-xs text-white/40 font-medium uppercase tracking-wider mb-2">Scores</p>
+                              <p className="text-xs text-gray-900/40 font-medium uppercase tracking-wider mb-2">Scores</p>
                               <div className="grid grid-cols-2 gap-2">
                                 {Object.entries(review.scores).map(([key, val]) => (
                                   <div key={key} className="flex items-center justify-between bg-white/[0.04] rounded-lg px-3 py-2">
-                                    <span className="text-sm text-white/60 capitalize">{key.replace(/_/g, ' ')}</span>
+                                    <span className="text-sm text-gray-900/60 capitalize">{key.replace(/_/g, ' ')}</span>
                                     <span className="text-sm font-semibold">{val}</span>
                                   </div>
                                 ))}
@@ -337,10 +337,10 @@ export default function PerformancePage() {
                           {/* Highlights */}
                           {review.highlights && review.highlights.length > 0 && (
                             <div>
-                              <p className="text-xs text-white/40 font-medium uppercase tracking-wider mb-2">Highlights</p>
+                              <p className="text-xs text-gray-900/40 font-medium uppercase tracking-wider mb-2">Highlights</p>
                               <ul className="space-y-1">
                                 {review.highlights.map((h, i) => (
-                                  <li key={i} className="text-sm text-green-400/80 flex items-start gap-2">
+                                  <li key={i} className="text-sm text-green-600/80 flex items-start gap-2">
                                     <span className="mt-0.5">✓</span>
                                     {h}
                                   </li>
@@ -352,10 +352,10 @@ export default function PerformancePage() {
                           {/* Improvements */}
                           {review.improvements && review.improvements.length > 0 && (
                             <div>
-                              <p className="text-xs text-white/40 font-medium uppercase tracking-wider mb-2">Areas for Improvement</p>
+                              <p className="text-xs text-gray-900/40 font-medium uppercase tracking-wider mb-2">Areas for Improvement</p>
                               <ul className="space-y-1">
                                 {review.improvements.map((imp, i) => (
-                                  <li key={i} className="text-sm text-yellow-400/80 flex items-start gap-2">
+                                  <li key={i} className="text-sm text-yellow-600/80 flex items-start gap-2">
                                     <span className="mt-0.5">→</span>
                                     {imp}
                                   </li>
@@ -367,8 +367,8 @@ export default function PerformancePage() {
                           {/* AI Summary */}
                           {review.aiSummary && (
                             <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-                              <p className="text-xs text-blue-400 font-medium uppercase tracking-wider mb-1.5">AI Summary</p>
-                              <p className="text-sm text-white/70 leading-relaxed">{review.aiSummary}</p>
+                              <p className="text-xs text-blue-600 font-medium uppercase tracking-wider mb-1.5">AI Summary</p>
+                              <p className="text-sm text-gray-900/70 leading-relaxed">{review.aiSummary}</p>
                             </div>
                           )}
 
@@ -378,18 +378,18 @@ export default function PerformancePage() {
                               <button
                                 onClick={() => handleReviewAction(review.id, 'approve')}
                                 disabled={actionLoading === review.id}
-                                className="flex-1 py-2.5 rounded-xl bg-green-500/20 text-green-400 text-sm font-medium hover:bg-green-500/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
+                                className="flex-1 py-2.5 rounded-xl bg-green-500/20 text-green-600 text-sm font-medium hover:bg-green-500/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
                               >
                                 Approve
                               </button>
                               <button
                                 onClick={() => handleReviewAction(review.id, 'reject')}
                                 disabled={actionLoading === review.id}
-                                className="flex-1 py-2.5 rounded-xl bg-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
+                                className="flex-1 py-2.5 rounded-xl bg-red-500/20 text-red-600 text-sm font-medium hover:bg-red-500/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
                               >
                                 Reject
                               </button>
-                              <button className="flex-1 py-2.5 rounded-xl bg-white/[0.05] text-white/60 text-sm font-medium hover:bg-white/[0.08] transition-all duration-200 active:scale-[0.98]">
+                              <button className="flex-1 py-2.5 rounded-xl bg-white/[0.05] text-gray-900/60 text-sm font-medium hover:bg-white/[0.08] transition-all duration-200 active:scale-[0.98]">
                                 Edit
                               </button>
                             </div>

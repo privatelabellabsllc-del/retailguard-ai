@@ -33,12 +33,12 @@ const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 // Loading spinner
 const LoadingSpinner: React.FC = () => (
-  <div className="min-h-screen flex items-center justify-center" style={{ background: '#1C1C1E' }}>
+  <div className="min-h-screen flex items-center justify-center" style={{ background: '#F5F5F7' }}>
     <div className="flex flex-col items-center gap-4">
       <div className="relative">
         <div className="w-10 h-10 rounded-full border-2 border-white/10 border-t-blue-500 animate-spin" />
       </div>
-      <p className="text-xs text-white/30 font-medium tracking-wide">Loading…</p>
+      <p className="text-xs text-gray-900/30 font-medium tracking-wide">Loading…</p>
     </div>
   </div>
 );

@@ -120,9 +120,9 @@ export default function ReviewQueuePage() {
 
   const confidenceColor = (c: number) => {
     const pct = c > 1 ? c : c * 100;
-    if (pct >= 80) return 'text-red-400';
+    if (pct >= 80) return 'text-red-600';
     if (pct >= 65) return 'text-orange-400';
-    return 'text-yellow-400';
+    return 'text-yellow-600';
   };
 
   const confidenceDisplay = (c?: number) => {
@@ -132,12 +132,12 @@ export default function ReviewQueuePage() {
 
   const statusBadge = (s: string) => {
     switch (s) {
-      case 'pending_review': return 'bg-gray-500/15 text-gray-400';
-      case 'confirmed_theft': return 'bg-red-500/15 text-red-400';
-      case 'not_theft': return 'bg-green-500/15 text-green-400';
-      case 'unsure': return 'bg-yellow-500/15 text-yellow-400';
-      case 'escalated': return 'bg-purple-500/15 text-purple-400';
-      default: return 'bg-gray-500/15 text-gray-400';
+      case 'pending_review': return 'bg-gray-500/15 text-gray-500';
+      case 'confirmed_theft': return 'bg-red-500/15 text-red-600';
+      case 'not_theft': return 'bg-green-500/15 text-green-600';
+      case 'unsure': return 'bg-yellow-500/15 text-yellow-600';
+      case 'escalated': return 'bg-purple-500/15 text-purple-600';
+      default: return 'bg-gray-500/15 text-gray-500';
     }
   };
 
@@ -172,12 +172,12 @@ export default function ReviewQueuePage() {
     return (
       <div className="p-8 space-y-6 max-w-[1400px] mx-auto">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Review Queue</h1>
-          <p className="text-sm text-gray-400 mt-1">Classify AI-flagged incidents</p>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Review Queue</h1>
+          <p className="text-sm text-gray-500 mt-1">Classify AI-flagged incidents</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-[#2C2C2E]/80 backdrop-blur-xl rounded-2xl p-5 border border-white/5 animate-pulse">
+            <div key={i} className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-white/5 animate-pulse">
               <div className="h-4 bg-white/10 rounded w-24 mb-3" />
               <div className="h-8 bg-white/10 rounded w-16" />
             </div>
@@ -185,7 +185,7 @@ export default function ReviewQueuePage() {
         </div>
         <div className="space-y-4">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-[#2C2C2E]/80 backdrop-blur-xl rounded-2xl p-5 border border-white/5 animate-pulse">
+            <div key={i} className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-white/5 animate-pulse">
               <div className="h-4 bg-white/10 rounded w-3/4 mb-3" />
               <div className="h-3 bg-white/10 rounded w-1/2" />
             </div>
@@ -198,21 +198,21 @@ export default function ReviewQueuePage() {
   return (
     <div className="p-8 space-y-6 max-w-[1400px] mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-white tracking-tight">Review Queue</h1>
-        <p className="text-sm text-gray-400 mt-1">Classify AI-flagged incidents</p>
+        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Review Queue</h1>
+        <p className="text-sm text-gray-500 mt-1">Classify AI-flagged incidents</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'Pending Review', value: stats.pending, color: 'text-yellow-400', icon: '⏳' },
-          { label: 'Reviewed', value: stats.reviewed, color: 'text-blue-400', icon: '✅' },
-          { label: 'Theft Confirmed Rate', value: `${stats.theftRate}%`, color: 'text-red-400', icon: '📊' },
+          { label: 'Pending Review', value: stats.pending, color: 'text-yellow-600', icon: '⏳' },
+          { label: 'Reviewed', value: stats.reviewed, color: 'text-blue-600', icon: '✅' },
+          { label: 'Theft Confirmed Rate', value: `${stats.theftRate}%`, color: 'text-red-600', icon: '📊' },
         ].map((s) => (
-          <div key={s.label} className="bg-[#2C2C2E]/80 backdrop-blur-xl rounded-2xl p-5 border border-white/5">
+          <div key={s.label} className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-white/5">
             <div className="flex items-center gap-2 mb-2">
               <span>{s.icon}</span>
-              <span className="text-xs text-gray-400 uppercase tracking-wider">{s.label}</span>
+              <span className="text-xs text-gray-500 uppercase tracking-wider">{s.label}</span>
             </div>
             <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
           </div>
@@ -220,7 +220,7 @@ export default function ReviewQueuePage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-1 bg-[#2C2C2E]/60 backdrop-blur-xl rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-white/60 backdrop-blur-xl rounded-xl p-1 w-fit">
         {([
           { key: 'all', label: 'All' },
           { key: 'pending_review', label: 'Pending' },
@@ -233,8 +233,8 @@ export default function ReviewQueuePage() {
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               activeTab === tab.key
-                ? 'bg-[#3A3A3C] text-white shadow-sm'
-                : 'text-gray-400 hover:text-gray-300'
+                ? 'bg-gray-100 text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-600'
             }`}
           >
             {tab.label}
@@ -251,12 +251,12 @@ export default function ReviewQueuePage() {
           return (
             <div
               key={inc.id}
-              className="bg-[#2C2C2E]/80 backdrop-blur-xl rounded-2xl border border-white/5 overflow-hidden transition-all duration-300 hover:border-white/10"
+              className="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/5 overflow-hidden transition-all duration-300 hover:border-white/10"
             >
               <div className="p-5 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : inc.id)}>
                 <div className="flex gap-5">
                   {/* Video thumbnail placeholder */}
-                  <div className="w-40 h-24 bg-[#1C1C1E] rounded-xl flex items-center justify-center shrink-0 border border-white/5 relative overflow-hidden">
+                  <div className="w-40 h-24 bg-[#F5F5F7] rounded-xl flex items-center justify-center shrink-0 border border-white/5 relative overflow-hidden">
                     <div className="text-center">
                       <svg className="w-8 h-8 text-gray-600 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -271,21 +271,21 @@ export default function ReviewQueuePage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <p className="text-sm font-medium text-white">{inc.ai_description || 'AI-flagged incident'}</p>
+                        <p className="text-sm font-medium text-gray-900">{inc.ai_description || 'AI-flagged incident'}</p>
                         <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                          <span className="text-xs text-gray-400">{formatTime(inc.detected_at || inc.created_at)}</span>
+                          <span className="text-xs text-gray-500">{formatTime(inc.detected_at || inc.created_at)}</span>
                           <span className="text-xs text-gray-500">•</span>
-                          <span className="text-xs text-gray-400">{inc.zone_name || inc.camera_id || 'Unknown'}</span>
+                          <span className="text-xs text-gray-500">{inc.zone_name || inc.camera_id || 'Unknown'}</span>
                           {inc.person_display_name && (
                             <>
                               <span className="text-xs text-gray-500">•</span>
-                              <span className="text-xs text-purple-400">🔗 {inc.person_display_name}</span>
+                              <span className="text-xs text-purple-600">🔗 {inc.person_display_name}</span>
                             </>
                           )}
                           {inc.estimated_item && (
                             <>
                               <span className="text-xs text-gray-500">•</span>
-                              <span className="text-xs text-blue-400">📦 {inc.estimated_item}</span>
+                              <span className="text-xs text-blue-600">📦 {inc.estimated_item}</span>
                             </>
                           )}
                         </div>
@@ -310,8 +310,8 @@ export default function ReviewQueuePage() {
                         disabled={isReviewing}
                         className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 active:scale-95 disabled:opacity-50 ${
                           inc.review_status === 'confirmed_theft'
-                            ? 'bg-red-500 text-white'
-                            : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                            ? 'bg-red-500 text-gray-900'
+                            : 'bg-red-500/10 text-red-600 hover:bg-red-500/20'
                         }`}
                       >
                         {isReviewing ? '...' : '🚨 Theft'}
@@ -321,8 +321,8 @@ export default function ReviewQueuePage() {
                         disabled={isReviewing}
                         className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 active:scale-95 disabled:opacity-50 ${
                           inc.review_status === 'not_theft'
-                            ? 'bg-green-500 text-white'
-                            : 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
+                            ? 'bg-green-500 text-gray-900'
+                            : 'bg-green-500/10 text-green-600 hover:bg-green-500/20'
                         }`}
                       >
                         {isReviewing ? '...' : '✅ Not Theft'}
@@ -332,8 +332,8 @@ export default function ReviewQueuePage() {
                         disabled={isReviewing}
                         className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 active:scale-95 disabled:opacity-50 ${
                           inc.review_status === 'unsure'
-                            ? 'bg-yellow-500 text-white'
-                            : 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
+                            ? 'bg-yellow-500 text-gray-900'
+                            : 'bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20'
                         }`}
                       >
                         {isReviewing ? '...' : '🤔 Unsure'}
@@ -345,16 +345,16 @@ export default function ReviewQueuePage() {
 
               {/* Expanded Detail */}
               {isExpanded && (
-                <div className="border-t border-white/5 p-5 bg-[#1C1C1E]/40">
+                <div className="border-t border-white/5 p-5 bg-[#F5F5F7]/40">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Clips / Frames */}
                     <div>
-                      <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">Detection Details</p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Detection Details</p>
                       <div className="grid grid-cols-2 gap-2">
                         {(inc.clips && inc.clips.length > 0 ? inc.clips : ['frame-1', 'frame-2', 'frame-3', 'frame-4']).map((clip, i) => (
                           <div
                             key={i}
-                            className="aspect-video bg-[#2C2C2E] rounded-xl flex items-center justify-center border border-white/5"
+                            className="aspect-video bg-white rounded-xl flex items-center justify-center border border-white/5"
                           >
                             <span className="text-xs text-gray-600">Frame {i + 1}</span>
                           </div>
@@ -365,32 +365,32 @@ export default function ReviewQueuePage() {
                     {/* AI Analysis */}
                     <div className="space-y-4">
                       <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">AI Analysis</p>
+                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">AI Analysis</p>
                         <div className="space-y-3">
-                          <div className="bg-[#2C2C2E]/60 rounded-xl p-4">
-                            <p className="text-xs text-gray-400 mb-1">Description</p>
-                            <p className="text-sm text-white/80">{inc.ai_description || 'No description available'}</p>
+                          <div className="bg-white/60 rounded-xl p-4">
+                            <p className="text-xs text-gray-500 mb-1">Description</p>
+                            <p className="text-sm text-gray-900/80">{inc.ai_description || 'No description available'}</p>
                           </div>
                           <div className="grid grid-cols-3 gap-2">
-                            <div className="bg-[#2C2C2E]/60 rounded-xl p-3 text-center">
-                              <p className="text-lg font-bold text-white">
+                            <div className="bg-white/60 rounded-xl p-3 text-center">
+                              <p className="text-lg font-bold text-gray-900">
                                 {inc.estimated_value ? `$${inc.estimated_value}` : '—'}
                               </p>
                               <p className="text-[10px] text-gray-500">Est. Value</p>
                             </div>
-                            <div className="bg-[#2C2C2E]/60 rounded-xl p-3 text-center">
-                              <p className="text-lg font-bold text-white">{confidenceDisplay(inc.ai_confidence)}</p>
+                            <div className="bg-white/60 rounded-xl p-3 text-center">
+                              <p className="text-lg font-bold text-gray-900">{confidenceDisplay(inc.ai_confidence)}</p>
                               <p className="text-[10px] text-gray-500">Confidence</p>
                             </div>
-                            <div className="bg-[#2C2C2E]/60 rounded-xl p-3 text-center">
-                              <p className="text-lg font-bold text-white capitalize">{inc.severity || '—'}</p>
+                            <div className="bg-white/60 rounded-xl p-3 text-center">
+                              <p className="text-lg font-bold text-gray-900 capitalize">{inc.severity || '—'}</p>
                               <p className="text-[10px] text-gray-500">Severity</p>
                             </div>
                           </div>
                           {inc.estimated_item && (
-                            <div className="bg-[#2C2C2E]/60 rounded-xl p-4">
-                              <p className="text-xs text-gray-400 mb-1">Estimated Item</p>
-                              <span className="px-2.5 py-0.5 bg-blue-500/10 text-blue-400 text-xs rounded-full">
+                            <div className="bg-white/60 rounded-xl p-4">
+                              <p className="text-xs text-gray-500 mb-1">Estimated Item</p>
+                              <span className="px-2.5 py-0.5 bg-blue-500/10 text-blue-600 text-xs rounded-full">
                                 {inc.estimated_item}
                               </span>
                             </div>
@@ -399,15 +399,15 @@ export default function ReviewQueuePage() {
                       </div>
 
                       {inc.person_display_name && (
-                        <div className="bg-[#2C2C2E]/60 rounded-xl p-4">
-                          <p className="text-xs text-gray-400 mb-2">Person Match</p>
+                        <div className="bg-white/60 rounded-xl p-4">
+                          <p className="text-xs text-gray-500 mb-2">Person Match</p>
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
                               <span className="text-sm">👤</span>
                             </div>
                             <div>
-                              <p className="text-sm text-white font-medium">{inc.person_display_name}</p>
-                              <p className="text-xs text-gray-400">Status: {inc.person_status || 'unknown'}</p>
+                              <p className="text-sm text-gray-900 font-medium">{inc.person_display_name}</p>
+                              <p className="text-xs text-gray-500">Status: {inc.person_status || 'unknown'}</p>
                             </div>
                           </div>
                         </div>

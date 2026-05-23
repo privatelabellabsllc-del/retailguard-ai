@@ -35,7 +35,7 @@ export default function PersonDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading || !person) return <div className="text-gray-400">Loading...</div>;
+  if (loading || !person) return <div className="text-gray-500">Loading...</div>;
 
   const statusConfig = {
     blacklisted: { color: 'badge-danger', label: '⛔ Blacklisted' },
@@ -50,14 +50,14 @@ export default function PersonDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-gray-300 mb-4 text-sm">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-500 hover:text-gray-600 mb-4 text-sm">
         <ArrowLeft className="w-4 h-4" /> Back
       </button>
 
       {/* Header */}
       <div className="card mb-6">
         <div className="flex gap-6">
-          <div className="w-28 h-28 bg-gray-800 rounded-xl flex items-center justify-center shrink-0">
+          <div className="w-28 h-28 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">
             {person.best_portrait_path ? (
               <img src={person.best_portrait_path} alt="" className="w-full h-full rounded-xl object-cover" />
             ) : (
@@ -80,7 +80,7 @@ export default function PersonDetailPage() {
               </div>
               <div>
                 <span className="text-gray-500">Confirmed Thefts</span>
-                <p className="font-medium text-red-400">{person.total_confirmed_thefts}</p>
+                <p className="font-medium text-red-600">{person.total_confirmed_thefts}</p>
               </div>
               <div>
                 <span className="text-gray-500">Last Seen</span>
@@ -115,7 +115,7 @@ export default function PersonDetailPage() {
                 }
                 setEditNotes(!editNotes);
               }}
-              className="text-sm text-blue-400 hover:text-blue-300"
+              className="text-sm text-blue-600 hover:text-blue-500"
             >
               {editNotes ? 'Save' : 'Edit'}
             </button>
@@ -124,11 +124,11 @@ export default function PersonDetailPage() {
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+              className="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
               rows={4}
             />
           ) : (
-            <p className="text-sm text-gray-400 whitespace-pre-wrap">{notes || 'No notes'}</p>
+            <p className="text-sm text-gray-500 whitespace-pre-wrap">{notes || 'No notes'}</p>
           )}
         </div>
       </div>
@@ -143,7 +143,7 @@ export default function PersonDetailPage() {
         ) : (
           <div className="space-y-2">
             {sightings.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg text-sm">
+              <div key={s.id} className="flex items-center gap-3 p-3 bg-gray-100/60 rounded-lg text-sm">
                 <Clock className="w-4 h-4 text-gray-600 shrink-0" />
                 <div className="flex-1">
                   <span>{new Date(s.timestamp).toLocaleString()}</span>

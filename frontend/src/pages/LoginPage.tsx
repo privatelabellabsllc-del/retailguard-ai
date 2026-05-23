@@ -31,13 +31,13 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: '#1C1C1E' }}>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: '#F5F5F7' }}>
       {/* Subtle grid pattern */}
       <div
         className="absolute inset-0 opacity-[0.03]"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)',
+            'linear-gradient(rgba(0,0,0,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,.04) 1px, transparent 1px)',
           backgroundSize: '60px 60px',
         }}
       />
@@ -66,15 +66,15 @@ const LoginPage: React.FC = () => {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{ background: 'rgba(59,130,246,0.15)' }}>
               <span className="text-3xl">🛡️</span>
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
               RetailGuard AI
             </h1>
-            <p className="text-sm text-white/40 mt-1">AI-Powered Retail Intelligence</p>
+            <p className="text-sm text-gray-900/40 mt-1">AI-Powered Retail Intelligence</p>
           </div>
 
           {/* Error */}
           {error && (
-            <div className="mb-4 px-4 py-2.5 rounded-xl text-sm text-red-300 border border-red-500/20" style={{ background: 'rgba(239,68,68,0.1)' }}>
+            <div className="mb-4 px-4 py-2.5 rounded-xl text-sm text-red-500 border border-red-500/20" style={{ background: 'rgba(239,68,68,0.1)' }}>
               {error}
             </div>
           )}
@@ -82,27 +82,27 @@ const LoginPage: React.FC = () => {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-white/50 mb-1.5 ml-1">Username</label>
+              <label className="block text-xs font-medium text-gray-900/50 mb-1.5 ml-1">Username</label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Enter your username"
                 required
-                className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                className="w-full px-4 py-3 rounded-xl text-sm text-gray-900 placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
                 style={{ background: 'rgba(0,0,0,0.3)' }}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-white/50 mb-1.5 ml-1">Password</label>
+              <label className="block text-xs font-medium text-gray-900/50 mb-1.5 ml-1">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 required
-                className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                className="w-full px-4 py-3 rounded-xl text-sm text-gray-900 placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
                 style={{ background: 'rgba(0,0,0,0.3)' }}
               />
             </div>
@@ -110,7 +110,7 @@ const LoginPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-full text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+              className="w-full py-3 rounded-full text-sm font-semibold text-gray-900 transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-2"
               style={{
                 background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
                 boxShadow: '0 4px 14px rgba(59,130,246,0.35)',
@@ -132,7 +132,7 @@ const LoginPage: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs text-white/20 mt-6">
+        <p className="text-center text-xs text-gray-900/20 mt-6">
           RetailGuard AI © {new Date().getFullYear()}
         </p>
       </div>

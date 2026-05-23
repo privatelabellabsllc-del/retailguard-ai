@@ -120,6 +120,124 @@ def startup():
         print(f"StreamManager init error (non-fatal): {e}")
 
 
+@app.post("/api/admin/reset")
+def reset_and_seed():
+    """Wipe all data and seed one demo item per feature."""
+    from passlib.context import CryptContext
+    from app.database import SessionLocal
+    from datetime import datetime, timedelta
+    import uuid
+
+    db = SessionLocal()
+    try:
+        # Wipe all data (order matters for FK constraints)
+        for model in [
+            Alert, Incident, FeaturePermission, RoleTemplate,
+            CashTransaction, CashAlert, CashSession,
+            PerformanceMetric, PerformanceReview, ReviewTemplate, Shift,
+            TrafficCount, TrafficVisitor,
+            OutOfStockAlert, ShelfProduct, Product, Shelf, StoreScan,
+            HeatmapData, FridgeDoorEvent, RevenueRecord, DailyAnalytics,
+            Camera, Person, Location, User,
+        ]:
+            db.query(model).delete()
+        db.commit()
+
+        # --- Seed admin user ---
+        pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        admin = User(
+            username="admin",
+            hashed_password=pwd.hash("admin123"),
+            email="admin@retailguard.ai",
+            full_name="System Admin",
+            role="owner",
+            is_active=True,
+        )
+        db.add(admin)
+        db.flush()
+
+        # --- Seed one location ---
+        loc = Location(id=uuid.uuid4(), name="Main Store", address="123 Retail Ave")
+        db.add(loc)
+        db.flush()
+
+        # --- Seed one camera ---
+        cam = Camera(
+            id=uuid.uuid4(),
+            name="Front Entrance",
+            rtsp_url="rtsp://192.168.1.100:554/stream1",
+            location_id=loc.id,
+            status="offline",
+            camera_type="dome",
+        )
+        db.add(cam)
+        db.flush()
+
+        # --- Seed one person (known visitor) ---
+        person = Person(
+            id=uuid.uuid4(),
+            name="John Doe",
+            status="suspect",
+            threat_level="medium",
+            first_seen=datetime.utcnow() - timedelta(days=3),
+            last_seen=datetime.utcnow() - timedelta(hours=2),
+            visit_count=2,
+            notes="Observed concealing merchandise on previous visit",
+        )
+        db.add(person)
+        db.flush()
+
+        # --- Seed one incident (pending review) ---
+        incident = Incident(
+            id=uuid.uuid4(),
+            camera_id=cam.id,
+            person_id=person.id,
+            incident_type="concealment",
+            description="Subject placed wireless earbuds into jacket pocket near electronics aisle",
+            confidence=0.87,
+            status="pending",
+            detected_at=datetime.utcnow() - timedelta(hours=1),
+            item_description="Wireless Earbuds — $49.99",
+            estimated_value=49.99,
+        )
+        db.add(incident)
+        db.flush()
+
+        # --- Seed one alert ---
+        alert = Alert(
+            id=uuid.uuid4(),
+            alert_type="known_offender",
+            severity="high",
+            title="Known suspect detected at Front Entrance",
+            description="John Doe — previously flagged for concealment — entered via Front Entrance camera",
+            person_id=person.id,
+            camera_id=cam.id,
+            is_active=True,
+            created_at=datetime.utcnow() - timedelta(minutes=30),
+        )
+        db.add(alert)
+        db.flush()
+
+        db.commit()
+        return {
+            "status": "ok",
+            "message": "Database wiped and seeded with demo data",
+            "seeded": {
+                "users": 1,
+                "locations": 1,
+                "cameras": 1,
+                "persons": 1,
+                "incidents": 1,
+                "alerts": 1,
+            }
+        }
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "message": str(e)}
+    finally:
+        db.close()
+
+
 @app.get("/")
 def root():
     return {

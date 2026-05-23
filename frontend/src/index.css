@@ -4,38 +4,38 @@
 
 @layer base {
   body {
-    @apply bg-gray-950 text-gray-100 antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    @apply bg-[#F5F5F7] text-gray-900 antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', system-ui, sans-serif;
   }
 }
 
 @layer components {
   .card {
-    @apply bg-gray-900 border border-gray-800 rounded-xl p-6;
+    @apply bg-white border border-gray-200 rounded-2xl p-6 shadow-sm;
   }
   
   .card-dark {
-    @apply bg-gray-900/50 border border-gray-800/50 rounded-xl p-4;
+    @apply bg-white/80 border border-gray-200/60 rounded-2xl p-4 shadow-sm backdrop-blur-sm;
   }
   
   .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors;
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-xl transition-all;
   }
   
   .btn-danger {
-    @apply bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg transition-colors;
+    @apply bg-red-500 hover:bg-red-600 text-white font-medium px-4 py-2 rounded-xl transition-all;
   }
   
   .btn-warning {
-    @apply bg-amber-600 hover:bg-amber-700 text-white font-medium px-4 py-2 rounded-lg transition-colors;
+    @apply bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2 rounded-xl transition-all;
   }
   
   .btn-success {
-    @apply bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg transition-colors;
+    @apply bg-green-500 hover:bg-green-600 text-white font-medium px-4 py-2 rounded-xl transition-all;
   }
   
   .btn-outline {
-    @apply border border-gray-600 hover:bg-gray-800 text-gray-300 font-medium px-4 py-2 rounded-lg transition-colors;
+    @apply border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-xl transition-all;
   }
   
   .badge {
@@ -43,31 +43,31 @@
   }
   
   .badge-danger {
-    @apply badge bg-red-900/50 text-red-400 border border-red-800;
+    @apply badge bg-red-50 text-red-600 border border-red-200;
   }
   
   .badge-warning {
-    @apply badge bg-amber-900/50 text-amber-400 border border-amber-800;
+    @apply badge bg-amber-50 text-amber-600 border border-amber-200;
   }
   
   .badge-success {
-    @apply badge bg-green-900/50 text-green-400 border border-green-800;
+    @apply badge bg-green-50 text-green-600 border border-green-200;
   }
   
   .badge-info {
-    @apply badge bg-blue-900/50 text-blue-400 border border-blue-800;
+    @apply badge bg-blue-50 text-blue-600 border border-blue-200;
   }
   
   /* Alert panel animation */
   .alert-panel {
-    @apply fixed right-0 top-0 h-full w-[480px] bg-gray-900 border-l border-gray-800 shadow-2xl z-50;
+    @apply fixed right-0 top-0 h-full w-[480px] bg-white border-l border-gray-200 shadow-2xl z-50;
     animation: slideIn 0.3s ease-out;
   }
   
   /* Pulse effect for critical alerts */
   .alert-critical {
     animation: pulse 1.5s ease-in-out infinite;
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
   }
 }
 
@@ -79,9 +79,14 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: #D1D5DB;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: #9CA3AF;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
 }

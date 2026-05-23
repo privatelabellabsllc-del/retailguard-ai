@@ -48,7 +48,7 @@ const steps = [
     title: 'Open Camera',
     description: 'Launch the scanner from your phone and point it at the shelves',
     icon: (
-      <svg className="w-7 h-7 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <svg className="w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
       </svg>
@@ -59,7 +59,7 @@ const steps = [
     title: 'Walk Each Aisle',
     description: 'Slowly walk through each aisle — the camera captures everything automatically',
     icon: (
-      <svg className="w-7 h-7 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <svg className="w-7 h-7 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
       </svg>
@@ -114,7 +114,7 @@ export default function ScannerPage() {
     p.location.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const complianceColor = overallCompliance >= 90 ? 'text-emerald-400' : overallCompliance >= 70 ? 'text-amber-400' : 'text-red-400';
+  const complianceColor = overallCompliance >= 90 ? 'text-emerald-400' : overallCompliance >= 70 ? 'text-amber-600' : 'text-red-600';
   const complianceStroke = overallCompliance >= 90 ? 'stroke-emerald-400' : overallCompliance >= 70 ? 'stroke-amber-400' : 'stroke-red-400';
 
   const circumference = 2 * Math.PI * 54;
@@ -123,9 +123,9 @@ export default function ScannerPage() {
   return (
     <div className="min-h-screen p-6 lg:p-8 space-y-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-transparent border border-[#3A3A3C]/50 rounded-2xl p-8 lg:p-10">
+      <div className="bg-gradient-to-br from-blue-500/10 via-purple-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
         <div className="max-w-2xl">
-          <h1 className="text-3xl lg:text-4xl font-bold text-white tracking-tight mb-3">
+          <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">
             Store Scanner
           </h1>
           <p className="text-base text-[#86868B] leading-relaxed">
@@ -136,8 +136,8 @@ export default function ScannerPage() {
             disabled={scanning}
             className={`mt-6 px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-200 active:scale-95 ${
               scanning
-                ? 'bg-[#3A3A3C] text-[#636366] cursor-not-allowed'
-                : 'bg-blue-500 hover:bg-blue-400 text-white shadow-lg shadow-blue-500/20'
+                ? 'bg-gray-100 text-[#636366] cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-400 text-gray-900 shadow-sm shadow-blue-500/20'
             }`}
           >
             {scanning ? (
@@ -154,22 +154,22 @@ export default function ScannerPage() {
 
       {/* How It Works */}
       <div>
-        <h2 className="text-lg font-semibold text-white mb-4">How It Works</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">How It Works</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {steps.map(step => (
             <div
               key={step.number}
-              className="bg-[#2C2C2E]/80 backdrop-blur-xl border border-[#3A3A3C]/50 rounded-2xl p-6 transition-all duration-200 hover:border-[#48484A]/60 hover:shadow-lg hover:shadow-black/10 group"
+              className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6 transition-all duration-200 hover:border-[#48484A]/60 hover:shadow-sm hover:shadow-black/10 group"
             >
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#3A3A3C]/50 flex items-center justify-center group-hover:bg-[#48484A]/50 transition-colors duration-200">
+                <div className="w-10 h-10 rounded-xl bg-gray-100/50 flex items-center justify-center group-hover:bg-[#48484A]/50 transition-colors duration-200">
                   {step.icon}
                 </div>
-                <div className="w-6 h-6 rounded-full bg-[#3A3A3C] flex items-center justify-center">
+                <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
                   <span className="text-xs font-bold text-[#86868B]">{step.number}</span>
                 </div>
               </div>
-              <h3 className="text-sm font-semibold text-white mb-1">{step.title}</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-1">{step.title}</h3>
               <p className="text-xs text-[#86868B] leading-relaxed">{step.description}</p>
             </div>
           ))}
@@ -179,20 +179,20 @@ export default function ScannerPage() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Recent Scans */}
         <div className="xl:col-span-2 space-y-4">
-          <h2 className="text-lg font-semibold text-white">Recent Scans</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Recent Scans</h2>
           <div className="space-y-3">
             {scans.map(scan => (
               <div
                 key={scan.id}
-                className="bg-[#2C2C2E]/80 backdrop-blur-xl border border-[#3A3A3C]/50 rounded-2xl p-5 transition-all duration-200 hover:border-[#48484A]/60 flex flex-col sm:flex-row sm:items-center gap-4"
+                className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-5 transition-all duration-200 hover:border-[#48484A]/60 flex flex-col sm:flex-row sm:items-center gap-4"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-sm font-semibold text-white">{scan.type}</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">{scan.type}</h3>
                     <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
                       scan.status === 'Complete'
                         ? 'bg-emerald-500/15 text-emerald-400'
-                        : 'bg-amber-500/15 text-amber-400'
+                        : 'bg-amber-500/15 text-amber-600'
                     }`}>
                       {scan.status}
                     </span>
@@ -202,12 +202,12 @@ export default function ScannerPage() {
 
                 <div className="flex items-center gap-6 text-center">
                   <div>
-                    <p className="text-lg font-bold text-white">{scan.productsFound}</p>
+                    <p className="text-lg font-bold text-gray-900">{scan.productsFound}</p>
                     <p className="text-[10px] text-[#636366]">Products</p>
                   </div>
                   <div>
                     <p className={`text-lg font-bold ${
-                      scan.compliancePercent >= 90 ? 'text-emerald-400' : scan.compliancePercent >= 70 ? 'text-amber-400' : 'text-red-400'
+                      scan.compliancePercent >= 90 ? 'text-emerald-400' : scan.compliancePercent >= 70 ? 'text-amber-600' : 'text-red-600'
                     }`}>{scan.compliancePercent}%</p>
                     <p className="text-[10px] text-[#636366]">Compliance</p>
                   </div>
@@ -219,8 +219,8 @@ export default function ScannerPage() {
 
         {/* Planogram Compliance Ring */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-white">Planogram Compliance</h2>
-          <div className="bg-[#2C2C2E]/80 backdrop-blur-xl border border-[#3A3A3C]/50 rounded-2xl p-8 flex flex-col items-center">
+          <h2 className="text-lg font-semibold text-gray-900">Planogram Compliance</h2>
+          <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-8 flex flex-col items-center">
             <div className="relative w-36 h-36 mb-4">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
                 <circle
@@ -250,7 +250,7 @@ export default function ScannerPage() {
             </p>
           </div>
 
-          <div className="bg-[#2C2C2E]/80 backdrop-blur-xl border border-[#3A3A3C]/50 rounded-2xl p-5">
+          <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-5">
             <div className="space-y-3">
               {[
                 { label: 'Correct Position', value: '782', pct: '92%', color: 'bg-emerald-400' },
@@ -263,7 +263,7 @@ export default function ScannerPage() {
                     <span className="text-xs text-[#86868B]">{item.label}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-white">{item.value}</span>
+                    <span className="text-sm font-medium text-gray-900">{item.value}</span>
                     <span className="text-xs text-[#636366]">{item.pct}</span>
                   </div>
                 </div>
@@ -276,7 +276,7 @@ export default function ScannerPage() {
       {/* Products Discovered */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Products Discovered</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Products Discovered</h2>
           <div className="relative">
             <svg className="w-4 h-4 text-[#636366] absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -286,7 +286,7 @@ export default function ScannerPage() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search products..."
-              className="pl-10 pr-4 py-2 bg-[#2C2C2E]/80 border border-[#3A3A3C]/50 rounded-xl text-sm text-white placeholder:text-[#636366] focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25 transition-all duration-200 w-64"
+              className="pl-10 pr-4 py-2 bg-white/80 border border-gray-200/50 rounded-xl text-sm text-gray-900 placeholder:text-[#636366] focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25 transition-all duration-200 w-64"
             />
           </div>
         </div>
@@ -295,17 +295,17 @@ export default function ScannerPage() {
           {filteredProducts.map(product => (
             <div
               key={product.id}
-              className="bg-[#2C2C2E]/80 backdrop-blur-xl border border-[#3A3A3C]/50 rounded-2xl p-5 transition-all duration-200 hover:border-[#48484A]/60 hover:shadow-lg hover:shadow-black/10 group"
+              className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-5 transition-all duration-200 hover:border-[#48484A]/60 hover:shadow-sm hover:shadow-black/10 group"
             >
               {/* Image Placeholder */}
-              <div className="w-full h-28 rounded-xl bg-[#3A3A3C]/40 mb-4 flex items-center justify-center group-hover:bg-[#3A3A3C]/60 transition-colors duration-200">
+              <div className="w-full h-28 rounded-xl bg-gray-100/40 mb-4 flex items-center justify-center group-hover:bg-gray-100/60 transition-colors duration-200">
                 <svg className="w-8 h-8 text-[#636366]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               </div>
-              <h3 className="text-sm font-semibold text-white mb-1 group-hover:text-blue-400 transition-colors duration-200">{product.name}</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors duration-200">{product.name}</h3>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#3A3A3C] text-[#86868B]">
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-[#86868B]">
                   {product.category}
                 </span>
               </div>
@@ -321,7 +321,7 @@ export default function ScannerPage() {
         </div>
 
         {filteredProducts.length === 0 && (
-          <div className="bg-[#2C2C2E]/80 backdrop-blur-xl border border-[#3A3A3C]/50 rounded-2xl p-12 text-center">
+          <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-12 text-center">
             <p className="text-[#636366] text-sm">No products match your search</p>
           </div>
         )}

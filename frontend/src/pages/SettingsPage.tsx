@@ -36,7 +36,7 @@ const Toggle = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void 
   <button
     onClick={onToggle}
     className={`relative w-12 h-7 rounded-full transition-all duration-300 ${
-      enabled ? 'bg-blue-500' : 'bg-[#3A3A3C]'
+      enabled ? 'bg-blue-500' : 'bg-gray-100'
     }`}
   >
     <span
@@ -156,10 +156,10 @@ export default function SettingsPage() {
 
   const roleBadgeColor = (role: string) => {
     switch (role) {
-      case 'Owner': return 'bg-purple-500/15 text-purple-400';
-      case 'Manager': return 'bg-blue-500/15 text-blue-400';
-      case 'Clerk': return 'bg-green-500/15 text-green-400';
-      default: return 'bg-gray-500/15 text-gray-400';
+      case 'Owner': return 'bg-purple-500/15 text-purple-600';
+      case 'Manager': return 'bg-blue-500/15 text-blue-600';
+      case 'Clerk': return 'bg-green-500/15 text-green-600';
+      default: return 'bg-gray-500/15 text-gray-500';
     }
   };
 
@@ -174,8 +174,8 @@ export default function SettingsPage() {
   const renderGeneral = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-semibold text-white mb-1">General Settings</h3>
-        <p className="text-sm text-gray-400">Configure your store information</p>
+        <h3 className="text-xl font-semibold text-gray-900 mb-1">General Settings</h3>
+        <p className="text-sm text-gray-500">Configure your store information</p>
       </div>
       <div className="space-y-4">
         {[
@@ -184,19 +184,19 @@ export default function SettingsPage() {
           { label: 'Opening Time', key: 'openTime', type: 'time' },
           { label: 'Closing Time', key: 'closeTime', type: 'time' },
         ].map((field) => (
-          <div key={field.key} className="bg-[#2C2C2E]/60 rounded-xl p-4 flex items-center justify-between">
-            <label className="text-sm text-gray-300">{field.label}</label>
+          <div key={field.key} className="bg-white/60 rounded-xl p-4 flex items-center justify-between">
+            <label className="text-sm text-gray-600">{field.label}</label>
             <input
               type={field.type}
               value={general[field.key as keyof typeof general]}
               onChange={(e) => setGeneral({ ...general, [field.key]: e.target.value })}
-              className="bg-[#1C1C1E] border border-white/10 rounded-lg px-4 py-2 text-sm text-white w-64 focus:outline-none focus:border-blue-500/50 transition-all duration-200"
+              className="bg-[#F5F5F7] border border-white/10 rounded-lg px-4 py-2 text-sm text-gray-900 w-64 focus:outline-none focus:border-blue-500/50 transition-all duration-200"
             />
           </div>
         ))}
       </div>
       <div className="flex justify-end">
-        <button className="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-xl transition-all duration-200 active:scale-95">
+        <button className="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 text-gray-900 text-sm font-medium rounded-xl transition-all duration-200 active:scale-95">
           Save Changes
         </button>
       </div>
@@ -206,8 +206,8 @@ export default function SettingsPage() {
   const renderTeam = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-semibold text-white mb-1">Team Permissions</h3>
-        <p className="text-sm text-gray-400">Manage feature access for each team member</p>
+        <h3 className="text-xl font-semibold text-gray-900 mb-1">Team Permissions</h3>
+        <p className="text-sm text-gray-500">Manage feature access for each team member</p>
       </div>
 
       {!selectedUser ? (
@@ -216,20 +216,20 @@ export default function SettingsPage() {
             <button
               key={user.userId}
               onClick={() => setSelectedUser(user)}
-              className="w-full bg-[#2C2C2E]/60 rounded-xl p-4 flex items-center gap-4 hover:bg-[#3A3A3C]/60 transition-all duration-200 group"
+              className="w-full bg-white/60 rounded-xl p-4 flex items-center gap-4 hover:bg-gray-100/60 transition-all duration-200 group"
             >
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center text-white font-semibold text-sm">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center text-gray-900 font-semibold text-sm">
                 {user.name.split(' ').map(n => n[0]).join('')}
               </div>
               <div className="text-left flex-1">
-                <p className="text-sm font-medium text-white">{user.name}</p>
-                <p className="text-xs text-gray-400">{user.email}</p>
+                <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                <p className="text-xs text-gray-500">{user.email}</p>
               </div>
               <span className={`px-2.5 py-0.5 text-xs rounded-full font-medium ${roleBadgeColor(user.role)}`}>
                 {user.role}
               </span>
               <span className="text-xs text-gray-500">{user.enabledFeatures.length} features</span>
-              <svg className="w-4 h-4 text-gray-500 group-hover:text-gray-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              <svg className="w-4 h-4 text-gray-500 group-hover:text-gray-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
             </button>
           ))}
         </div>
@@ -237,19 +237,19 @@ export default function SettingsPage() {
         <div className="space-y-5">
           <button
             onClick={() => setSelectedUser(null)}
-            className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+            className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-500 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
             Back to team
           </button>
 
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center text-white font-semibold">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center text-gray-900 font-semibold">
               {selectedUser.name.split(' ').map(n => n[0]).join('')}
             </div>
             <div>
-              <p className="text-lg font-semibold text-white">{selectedUser.name}</p>
-              <p className="text-sm text-gray-400">{selectedUser.email}</p>
+              <p className="text-lg font-semibold text-gray-900">{selectedUser.name}</p>
+              <p className="text-sm text-gray-500">{selectedUser.email}</p>
             </div>
             <span className={`px-3 py-1 text-xs rounded-full font-medium ${roleBadgeColor(selectedUser.role)}`}>
               {selectedUser.role}
@@ -257,15 +257,15 @@ export default function SettingsPage() {
           </div>
 
           {/* Template selector */}
-          <div className="bg-[#2C2C2E]/60 rounded-xl p-4 flex items-center justify-between">
+          <div className="bg-white/60 rounded-xl p-4 flex items-center justify-between">
             <div>
-              <p className="text-sm text-white font-medium">Apply Template</p>
-              <p className="text-xs text-gray-400">Quick-apply a permission preset</p>
+              <p className="text-sm text-gray-900 font-medium">Apply Template</p>
+              <p className="text-xs text-gray-500">Quick-apply a permission preset</p>
             </div>
             <select
               onChange={(e) => applyTemplate(e.target.value)}
               defaultValue=""
-              className="bg-[#1C1C1E] border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all duration-200 cursor-pointer"
+              className="bg-[#F5F5F7] border border-white/10 rounded-lg px-4 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-500/50 transition-all duration-200 cursor-pointer"
             >
               <option value="" disabled>Choose template…</option>
               {Object.keys(roleTemplates).map((t) => (
@@ -287,11 +287,11 @@ export default function SettingsPage() {
                 {feats.map((feature) => (
                   <div
                     key={feature.id}
-                    className="bg-[#2C2C2E]/60 rounded-xl p-4 flex items-center justify-between mb-1.5 hover:bg-[#3A3A3C]/40 transition-all duration-200"
+                    className="bg-white/60 rounded-xl p-4 flex items-center justify-between mb-1.5 hover:bg-gray-100/40 transition-all duration-200"
                   >
                     <div>
-                      <p className="text-sm text-white font-medium">{feature.name}</p>
-                      <p className="text-xs text-gray-400">{feature.description}</p>
+                      <p className="text-sm text-gray-900 font-medium">{feature.name}</p>
+                      <p className="text-xs text-gray-500">{feature.description}</p>
                     </div>
                     <Toggle
                       enabled={selectedUser.enabledFeatures.includes(feature.id)}
@@ -310,8 +310,8 @@ export default function SettingsPage() {
   const renderNotifications = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-semibold text-white mb-1">Notifications</h3>
-        <p className="text-sm text-gray-400">Choose what alerts you receive</p>
+        <h3 className="text-xl font-semibold text-gray-900 mb-1">Notifications</h3>
+        <p className="text-sm text-gray-500">Choose what alerts you receive</p>
       </div>
       <div className="space-y-1.5">
         {[
@@ -326,11 +326,11 @@ export default function SettingsPage() {
         ].map((item) => (
           <div
             key={item.key}
-            className="bg-[#2C2C2E]/60 rounded-xl p-4 flex items-center justify-between hover:bg-[#3A3A3C]/40 transition-all duration-200"
+            className="bg-white/60 rounded-xl p-4 flex items-center justify-between hover:bg-gray-100/40 transition-all duration-200"
           >
             <div>
-              <p className="text-sm text-white font-medium">{item.label}</p>
-              <p className="text-xs text-gray-400">{item.desc}</p>
+              <p className="text-sm text-gray-900 font-medium">{item.label}</p>
+              <p className="text-xs text-gray-500">{item.desc}</p>
             </div>
             <Toggle
               enabled={notifications[item.key as keyof typeof notifications]}
@@ -345,39 +345,39 @@ export default function SettingsPage() {
   const renderIntegrations = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-semibold text-white mb-1">Integrations</h3>
-        <p className="text-sm text-gray-400">Manage connected services</p>
+        <h3 className="text-xl font-semibold text-gray-900 mb-1">Integrations</h3>
+        <p className="text-sm text-gray-500">Manage connected services</p>
       </div>
       <div className="space-y-4">
-        <div className="bg-[#2C2C2E]/60 rounded-xl p-5">
+        <div className="bg-white/60 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <span className="text-xl">🍀</span>
               <div>
-                <p className="text-sm text-white font-medium">Clover POS</p>
-                <p className="text-xs text-gray-400">Last synced 2 minutes ago</p>
+                <p className="text-sm text-gray-900 font-medium">Clover POS</p>
+                <p className="text-xs text-gray-500">Last synced 2 minutes ago</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-400" />
-              <span className="text-xs text-green-400">Connected</span>
+              <span className="text-xs text-green-600">Connected</span>
             </div>
           </div>
-          <button className="px-4 py-2 bg-red-500/10 text-red-400 text-xs font-medium rounded-lg hover:bg-red-500/20 transition-all duration-200">
+          <button className="px-4 py-2 bg-red-500/10 text-red-600 text-xs font-medium rounded-lg hover:bg-red-500/20 transition-all duration-200">
             Disconnect
           </button>
         </div>
 
-        <div className="bg-[#2C2C2E]/60 rounded-xl p-5">
-          <p className="text-sm text-white font-medium mb-2">API Key</p>
+        <div className="bg-white/60 rounded-xl p-5">
+          <p className="text-sm text-gray-900 font-medium mb-2">API Key</p>
           <div className="flex items-center gap-3">
-            <code className="flex-1 bg-[#1C1C1E] border border-white/10 rounded-lg px-4 py-2.5 text-xs text-gray-400 font-mono">
+            <code className="flex-1 bg-[#F5F5F7] border border-white/10 rounded-lg px-4 py-2.5 text-xs text-gray-500 font-mono">
               rg_sk_••••••••••••••••••••••••
             </code>
-            <button className="px-4 py-2.5 bg-[#3A3A3C] text-white text-xs font-medium rounded-lg hover:bg-[#48484A] transition-all duration-200">
+            <button className="px-4 py-2.5 bg-gray-100 text-gray-900 text-xs font-medium rounded-lg hover:bg-[#48484A] transition-all duration-200">
               Reveal
             </button>
-            <button className="px-4 py-2.5 bg-[#3A3A3C] text-white text-xs font-medium rounded-lg hover:bg-[#48484A] transition-all duration-200">
+            <button className="px-4 py-2.5 bg-gray-100 text-gray-900 text-xs font-medium rounded-lg hover:bg-[#48484A] transition-all duration-200">
               Regenerate
             </button>
           </div>
@@ -389,28 +389,28 @@ export default function SettingsPage() {
   const renderSecurity = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-semibold text-white mb-1">Security</h3>
-        <p className="text-sm text-gray-400">Manage your account security</p>
+        <h3 className="text-xl font-semibold text-gray-900 mb-1">Security</h3>
+        <p className="text-sm text-gray-500">Manage your account security</p>
       </div>
 
-      <div className="bg-[#2C2C2E]/60 rounded-xl p-5 space-y-4">
-        <p className="text-sm text-white font-medium">Change Password</p>
+      <div className="bg-white/60 rounded-xl p-5 space-y-4">
+        <p className="text-sm text-gray-900 font-medium">Change Password</p>
         {['Current Password', 'New Password', 'Confirm Password'].map((label) => (
           <div key={label}>
-            <label className="block text-xs text-gray-400 mb-1.5">{label}</label>
+            <label className="block text-xs text-gray-500 mb-1.5">{label}</label>
             <input
               type="password"
-              className="w-full bg-[#1C1C1E] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all duration-200"
+              className="w-full bg-[#F5F5F7] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-blue-500/50 transition-all duration-200"
             />
           </div>
         ))}
-        <button className="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-xl transition-all duration-200 active:scale-95">
+        <button className="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 text-gray-900 text-sm font-medium rounded-xl transition-all duration-200 active:scale-95">
           Update Password
         </button>
       </div>
 
-      <div className="bg-[#2C2C2E]/60 rounded-xl p-5">
-        <p className="text-sm text-white font-medium mb-3">Active Sessions</p>
+      <div className="bg-white/60 rounded-xl p-5">
+        <p className="text-sm text-gray-900 font-medium mb-3">Active Sessions</p>
         {[
           { device: 'Chrome on MacBook Pro', location: 'New York, US', current: true },
           { device: 'Safari on iPhone 15', location: 'New York, US', current: false },
@@ -418,13 +418,13 @@ export default function SettingsPage() {
         ].map((s, i) => (
           <div key={i} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
             <div>
-              <p className="text-sm text-white">{s.device}</p>
-              <p className="text-xs text-gray-400">{s.location}</p>
+              <p className="text-sm text-gray-900">{s.device}</p>
+              <p className="text-xs text-gray-500">{s.location}</p>
             </div>
             {s.current ? (
-              <span className="text-xs text-green-400 font-medium">Current</span>
+              <span className="text-xs text-green-600 font-medium">Current</span>
             ) : (
-              <button className="text-xs text-red-400 hover:text-red-300 transition-colors">Revoke</button>
+              <button className="text-xs text-red-600 hover:text-red-500 transition-colors">Revoke</button>
             )}
           </div>
         ))}
@@ -443,22 +443,22 @@ export default function SettingsPage() {
   return (
     <div className="p-8 max-w-[1400px] mx-auto">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white tracking-tight">Settings</h1>
-        <p className="text-sm text-gray-400 mt-1">Configure your RetailGuard system</p>
+        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Settings</h1>
+        <p className="text-sm text-gray-500 mt-1">Configure your RetailGuard system</p>
       </div>
 
       <div className="flex gap-6">
         {/* Sidebar */}
         <div className="w-56 shrink-0">
-          <div className="bg-[#2C2C2E]/80 backdrop-blur-xl rounded-2xl border border-white/5 p-2 space-y-0.5 sticky top-8">
+          <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/5 p-2 space-y-0.5 sticky top-8">
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => { setActiveCategory(cat.id); setSelectedUser(null); }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 ${
                   activeCategory === cat.id
-                    ? 'bg-blue-500/15 text-blue-400'
-                    : 'text-gray-400 hover:text-gray-300 hover:bg-white/[0.03]'
+                    ? 'bg-blue-500/15 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-600 hover:bg-white/[0.03]'
                 }`}
               >
                 <span className="text-base">{cat.icon}</span>
@@ -469,7 +469,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 bg-[#2C2C2E]/80 backdrop-blur-xl rounded-2xl border border-white/5 p-8">
+        <div className="flex-1 bg-white/80 backdrop-blur-xl rounded-2xl border border-white/5 p-8">
           {panelMap[activeCategory]?.()}
         </div>
       </div>

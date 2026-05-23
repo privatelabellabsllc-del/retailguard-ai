@@ -27,9 +27,9 @@ const StatCard: React.FC<{ label: string; value: string | number; icon: string }
   >
     <div className="flex items-center gap-3 mb-3">
       <span className="text-lg">{icon}</span>
-      <span className="text-xs font-medium text-white/40 uppercase tracking-wider">{label}</span>
+      <span className="text-xs font-medium text-gray-900/40 uppercase tracking-wider">{label}</span>
     </div>
-    <p className="text-2xl font-bold text-white">{value}</p>
+    <p className="text-2xl font-bold text-gray-900">{value}</p>
   </div>
 );
 
@@ -98,12 +98,12 @@ const BlacklistPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Blacklist</h1>
-          <p className="text-sm text-white/40 mt-1">Manage blacklisted individuals</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Blacklist</h1>
+          <p className="text-sm text-gray-900/40 mt-1">Manage blacklisted individuals</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="px-4 py-2.5 rounded-full text-sm font-medium text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
+          className="px-4 py-2.5 rounded-full text-sm font-medium text-gray-900 transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
           style={{
             background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
             boxShadow: '0 4px 14px rgba(59,130,246,0.3)',
@@ -123,7 +123,7 @@ const BlacklistPage: React.FC = () => {
       {/* Grid */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <svg className="animate-spin h-6 w-6 text-white/30" viewBox="0 0 24 24" fill="none">
+          <svg className="animate-spin h-6 w-6 text-gray-900/30" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
@@ -131,7 +131,7 @@ const BlacklistPage: React.FC = () => {
       ) : persons.length === 0 ? (
         <div className="text-center py-20">
           <span className="text-4xl mb-3 block">🛡️</span>
-          <p className="text-white/40 text-sm">No blacklisted individuals</p>
+          <p className="text-gray-900/40 text-sm">No blacklisted individuals</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -155,44 +155,44 @@ const BlacklistPage: React.FC = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-white truncate">{person.display_name || 'Unknown'}</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 truncate">{person.display_name || 'Unknown'}</h3>
                     {person.threat_level && person.threat_level >= 3 && (
-                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium text-red-300 border border-red-500/20" style={{ background: 'rgba(239,68,68,0.1)' }}>
+                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium text-red-500 border border-red-500/20" style={{ background: 'rgba(239,68,68,0.1)' }}>
                         <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
                         High Threat
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-white/35 mt-0.5">ID: {person.id}</p>
+                  <p className="text-xs text-gray-900/35 mt-0.5">ID: {person.id}</p>
                 </div>
               </div>
 
               {/* Details */}
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-xs">
-                  <span className="text-white/35">Threat Level</span>
-                  <span className="text-white/70">
+                  <span className="text-gray-900/35">Threat Level</span>
+                  <span className="text-gray-900/70">
                     {person.threat_level ? '🔴'.repeat(person.threat_level) + '⚪'.repeat(4 - person.threat_level) : '—'}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-white/35">Confirmed Thefts</span>
-                  <span className="text-red-400 font-medium">{person.total_confirmed_thefts || 0}</span>
+                  <span className="text-gray-900/35">Confirmed Thefts</span>
+                  <span className="text-red-600 font-medium">{person.total_confirmed_thefts || 0}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-white/35">Total Incidents</span>
-                  <span className="text-white/70">{person.total_incidents || 0}</span>
+                  <span className="text-gray-900/35">Total Incidents</span>
+                  <span className="text-gray-900/70">{person.total_incidents || 0}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-white/35">Last Seen</span>
-                  <span className="text-white/70">
+                  <span className="text-gray-900/35">Last Seen</span>
+                  <span className="text-gray-900/70">
                     {person.last_seen ? new Date(person.last_seen).toLocaleDateString() : '—'}
                   </span>
                 </div>
                 {person.notes && (
                   <div className="flex justify-between text-xs">
-                    <span className="text-white/35">Notes</span>
-                    <span className="text-white/70 text-right max-w-[60%] truncate">{person.notes}</span>
+                    <span className="text-gray-900/35">Notes</span>
+                    <span className="text-gray-900/70 text-right max-w-[60%] truncate">{person.notes}</span>
                   </div>
                 )}
               </div>
@@ -202,11 +202,11 @@ const BlacklistPage: React.FC = () => {
                 <button
                   onClick={() => handleRemove(person.id)}
                   disabled={removeLoading === person.id}
-                  className="flex-1 px-3 py-2 rounded-xl text-xs font-medium text-white/60 border border-white/[0.06] transition-all duration-200 hover:bg-white/[0.04] hover:text-white/80 disabled:opacity-50"
+                  className="flex-1 px-3 py-2 rounded-xl text-xs font-medium text-gray-900/60 border border-white/[0.06] transition-all duration-200 hover:bg-white/[0.04] hover:text-gray-900/80 disabled:opacity-50"
                 >
                   {removeLoading === person.id ? 'Removing...' : 'Remove'}
                 </button>
-                <button className="flex-1 px-3 py-2 rounded-xl text-xs font-medium text-blue-400 border border-blue-500/20 transition-all duration-200 hover:bg-blue-500/10">
+                <button className="flex-1 px-3 py-2 rounded-xl text-xs font-medium text-blue-600 border border-blue-500/20 transition-all duration-200 hover:bg-blue-500/10">
                   View History
                 </button>
               </div>
@@ -226,30 +226,30 @@ const BlacklistPage: React.FC = () => {
               boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
             }}
           >
-            <h2 className="text-lg font-bold text-white mb-1">Add to Blacklist</h2>
-            <p className="text-xs text-white/40 mb-5">Search by person ID to add to the blacklist</p>
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Add to Blacklist</h2>
+            <p className="text-xs text-gray-900/40 mb-5">Search by person ID to add to the blacklist</p>
 
             <form onSubmit={handleAdd} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5 ml-1">Person ID</label>
+                <label className="block text-xs font-medium text-gray-900/50 mb-1.5 ml-1">Person ID</label>
                 <input
                   type="text"
                   value={searchId}
                   onChange={(e) => setSearchId(e.target.value)}
                   placeholder="Enter person ID"
                   required
-                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full px-4 py-3 rounded-xl text-sm text-gray-900 placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
                   style={{ background: 'rgba(0,0,0,0.3)' }}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5 ml-1">Reason</label>
+                <label className="block text-xs font-medium text-gray-900/50 mb-1.5 ml-1">Reason</label>
                 <input
                   type="text"
                   value={addReason}
                   onChange={(e) => setAddReason(e.target.value)}
                   placeholder="Reason for blacklisting"
-                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full px-4 py-3 rounded-xl text-sm text-gray-900 placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
                   style={{ background: 'rgba(0,0,0,0.3)' }}
                 />
               </div>
@@ -257,14 +257,14 @@ const BlacklistPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-2.5 rounded-full text-sm font-medium text-white/60 border border-white/10 transition-all duration-200 hover:bg-white/[0.04]"
+                  className="flex-1 py-2.5 rounded-full text-sm font-medium text-gray-900/60 border border-white/10 transition-all duration-200 hover:bg-white/[0.04]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={addLoading}
-                  className="flex-1 py-2.5 rounded-full text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-full text-sm font-semibold text-gray-900 transition-all duration-200 hover:brightness-110 disabled:opacity-50"
                   style={{ background: 'linear-gradient(135deg, #EF4444, #DC2626)', boxShadow: '0 4px 14px rgba(239,68,68,0.3)' }}
                 >
                   {addLoading ? 'Adding…' : 'Blacklist'}

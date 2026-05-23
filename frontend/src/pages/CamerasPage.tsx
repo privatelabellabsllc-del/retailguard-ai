@@ -31,9 +31,9 @@ const StatCard: React.FC<{ label: string; value: string | number; icon: string; 
   >
     <div className="flex items-center gap-3 mb-3">
       <span className="text-lg">{icon}</span>
-      <span className="text-xs font-medium text-white/40 uppercase tracking-wider">{label}</span>
+      <span className="text-xs font-medium text-gray-900/40 uppercase tracking-wider">{label}</span>
     </div>
-    <p className={`text-2xl font-bold ${color || 'text-white'}`}>{value}</p>
+    <p className={`text-2xl font-bold ${color || 'text-gray-900'}`}>{value}</p>
   </div>
 );
 
@@ -155,15 +155,15 @@ const CamerasPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Cameras</h1>
-          <p className="text-sm text-white/40 mt-1">Monitor and manage camera feeds</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Cameras</h1>
+          <p className="text-sm text-gray-900/40 mt-1">Monitor and manage camera feeds</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Demo Controls */}
           <button
             onClick={handleDemoGenerate}
             disabled={streamActionLoading === 'demo-gen'}
-            className="px-4 py-2.5 rounded-full text-sm font-medium text-yellow-400 border border-yellow-500/30 transition-all duration-200 hover:bg-yellow-500/10 active:scale-[0.97] disabled:opacity-50"
+            className="px-4 py-2.5 rounded-full text-sm font-medium text-yellow-600 border border-yellow-500/30 transition-all duration-200 hover:bg-yellow-500/10 active:scale-[0.97] disabled:opacity-50"
           >
             {streamActionLoading === 'demo-gen' ? '...' : '⚡ Generate Incident'}
           </button>
@@ -172,7 +172,7 @@ const CamerasPage: React.FC = () => {
             disabled={streamActionLoading === 'demo'}
             className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-200 active:scale-[0.97] disabled:opacity-50 ${
               demoRunning
-                ? 'text-red-400 border border-red-500/30 hover:bg-red-500/10'
+                ? 'text-red-600 border border-red-500/30 hover:bg-red-500/10'
                 : 'text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10'
             }`}
           >
@@ -180,7 +180,7 @@ const CamerasPage: React.FC = () => {
           </button>
           <button
             onClick={() => setShowAddForm(true)}
-            className="px-4 py-2.5 rounded-full text-sm font-medium text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
+            className="px-4 py-2.5 rounded-full text-sm font-medium text-gray-900 transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
             style={{
               background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
               boxShadow: '0 4px 14px rgba(59,130,246,0.3)',
@@ -194,18 +194,18 @@ const CamerasPage: React.FC = () => {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <StatCard label="Total Cameras" value={cameras.length} icon="📷" />
-        <StatCard label="Active" value={activeCount} icon="🟢" color="text-green-400" />
+        <StatCard label="Active" value={activeCount} icon="🟢" color="text-green-600" />
         <StatCard
           label="AI Status"
           value={streamStatus?.ai_available ? 'Online' : 'Offline'}
           icon="🧠"
-          color={streamStatus?.ai_available ? 'text-emerald-400' : 'text-red-400'}
+          color={streamStatus?.ai_available ? 'text-emerald-400' : 'text-red-600'}
         />
         <StatCard
           label="AI Streams"
           value={streamStatus?.active_streams || 0}
           icon="📡"
-          color="text-blue-400"
+          color="text-blue-600"
         />
       </div>
 
@@ -215,12 +215,12 @@ const CamerasPage: React.FC = () => {
           <span className="text-lg">🧬</span>
           <div className="flex items-center gap-6 text-sm">
             <div>
-              <span className="text-white/40">Known Persons: </span>
-              <span className="text-white font-medium">{streamStatus.face_cache.persons}</span>
+              <span className="text-gray-900/40">Known Persons: </span>
+              <span className="text-gray-900 font-medium">{streamStatus.face_cache.persons}</span>
             </div>
             <div>
-              <span className="text-white/40">Face Embeddings: </span>
-              <span className="text-white font-medium">{streamStatus.face_cache.embeddings}</span>
+              <span className="text-gray-900/40">Face Embeddings: </span>
+              <span className="text-gray-900 font-medium">{streamStatus.face_cache.embeddings}</span>
             </div>
           </div>
         </div>
@@ -229,7 +229,7 @@ const CamerasPage: React.FC = () => {
       {/* Camera Grid */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <svg className="animate-spin h-6 w-6 text-white/30" viewBox="0 0 24 24" fill="none">
+          <svg className="animate-spin h-6 w-6 text-gray-900/30" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
@@ -237,8 +237,8 @@ const CamerasPage: React.FC = () => {
       ) : cameras.length === 0 ? (
         <div className="text-center py-20">
           <span className="text-4xl mb-3 block">📷</span>
-          <p className="text-white/40 text-sm">No cameras configured</p>
-          <p className="text-white/25 text-xs mt-1">Add a camera or use Demo Mode to generate test data</p>
+          <p className="text-gray-900/40 text-sm">No cameras configured</p>
+          <p className="text-gray-900/25 text-xs mt-1">Add a camera or use Demo Mode to generate test data</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -254,10 +254,10 @@ const CamerasPage: React.FC = () => {
               {/* Feed placeholder */}
               <div className="aspect-video relative flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
                 <div className="text-center">
-                  <svg className="w-8 h-8 text-white/15 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <svg className="w-8 h-8 text-gray-900/15 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
                   </svg>
-                  <span className="text-[10px] text-white/20 font-medium">LIVE FEED</span>
+                  <span className="text-[10px] text-gray-900/20 font-medium">LIVE FEED</span>
                 </div>
 
                 {/* Status badge */}
@@ -265,7 +265,7 @@ const CamerasPage: React.FC = () => {
                   style={{ background: 'rgba(0,0,0,0.5)' }}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${camera.is_active ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
-                  <span className={camera.is_active ? 'text-green-300' : 'text-red-300'}>
+                  <span className={camera.is_active ? 'text-green-500' : 'text-red-500'}>
                     {camera.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </div>
@@ -281,32 +281,32 @@ const CamerasPage: React.FC = () => {
               {/* Info */}
               <div className="p-4 space-y-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-white">{camera.name}</h3>
-                  {camera.description && <p className="text-xs text-white/35 mt-0.5">{camera.description}</p>}
+                  <h3 className="text-sm font-semibold text-gray-900">{camera.name}</h3>
+                  {camera.description && <p className="text-xs text-gray-900/35 mt-0.5">{camera.description}</p>}
                 </div>
 
                 <div className="space-y-1.5">
                   {camera.channel_number !== undefined && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-white/30">Channel</span>
-                      <span className="text-white/60">{camera.channel_number}</span>
+                      <span className="text-gray-900/30">Channel</span>
+                      <span className="text-gray-900/60">{camera.channel_number}</span>
                     </div>
                   )}
                   {camera.resolution && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-white/30">Resolution</span>
-                      <span className="text-white/60">{camera.resolution}</span>
+                      <span className="text-gray-900/30">Resolution</span>
+                      <span className="text-gray-900/60">{camera.resolution}</span>
                     </div>
                   )}
                   {camera.fps && (
                     <div className="flex justify-between text-xs">
-                      <span className="text-white/30">FPS</span>
-                      <span className="text-white/60">{camera.fps}</span>
+                      <span className="text-gray-900/30">FPS</span>
+                      <span className="text-gray-900/60">{camera.fps}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-xs">
-                    <span className="text-white/30">PTZ</span>
-                    <span className="text-white/60">{camera.is_ptz ? 'Yes' : 'No'}</span>
+                    <span className="text-gray-900/30">PTZ</span>
+                    <span className="text-gray-900/60">{camera.is_ptz ? 'Yes' : 'No'}</span>
                   </div>
                 </div>
 
@@ -322,7 +322,7 @@ const CamerasPage: React.FC = () => {
                   <button
                     onClick={() => handleStopAI(camera.id)}
                     disabled={streamActionLoading === camera.id}
-                    className="flex-1 px-3 py-2 rounded-xl text-xs font-medium text-red-400 border border-red-500/20 transition-all duration-200 hover:bg-red-500/10 disabled:opacity-50"
+                    className="flex-1 px-3 py-2 rounded-xl text-xs font-medium text-red-600 border border-red-500/20 transition-all duration-200 hover:bg-red-500/10 disabled:opacity-50"
                   >
                     {streamActionLoading === camera.id ? '...' : '⏹ Stop AI'}
                   </button>
@@ -344,54 +344,54 @@ const CamerasPage: React.FC = () => {
               boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
             }}
           >
-            <h2 className="text-lg font-bold text-white mb-1">Add Camera</h2>
-            <p className="text-xs text-white/40 mb-5">Configure a new camera feed</p>
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Add Camera</h2>
+            <p className="text-xs text-gray-900/40 mb-5">Configure a new camera feed</p>
 
             <form onSubmit={handleAdd} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5 ml-1">Camera Name</label>
+                <label className="block text-xs font-medium text-gray-900/50 mb-1.5 ml-1">Camera Name</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g. Main Entrance"
                   required
-                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full px-4 py-3 rounded-xl text-sm text-gray-900 placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
                   style={{ background: 'rgba(0,0,0,0.3)' }}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5 ml-1">RTSP URL</label>
+                <label className="block text-xs font-medium text-gray-900/50 mb-1.5 ml-1">RTSP URL</label>
                 <input
                   type="text"
                   value={formData.rtsp_url}
                   onChange={(e) => setFormData({ ...formData, rtsp_url: e.target.value })}
                   placeholder="rtsp://192.168.1.100:554/stream"
                   required
-                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full px-4 py-3 rounded-xl text-sm text-gray-900 placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
                   style={{ background: 'rgba(0,0,0,0.3)' }}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5 ml-1">Location ID</label>
+                <label className="block text-xs font-medium text-gray-900/50 mb-1.5 ml-1">Location ID</label>
                 <input
                   type="text"
                   value={formData.location_id}
                   onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
                   placeholder="e.g. store-1, floor-2"
                   required
-                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full px-4 py-3 rounded-xl text-sm text-gray-900 placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
                   style={{ background: 'rgba(0,0,0,0.3)' }}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5 ml-1">Description (optional)</label>
+                <label className="block text-xs font-medium text-gray-900/50 mb-1.5 ml-1">Description (optional)</label>
                 <input
                   type="text"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Optional description"
-                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full px-4 py-3 rounded-xl text-sm text-gray-900 placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
                   style={{ background: 'rgba(0,0,0,0.3)' }}
                 />
               </div>
@@ -400,14 +400,14 @@ const CamerasPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="flex-1 py-2.5 rounded-full text-sm font-medium text-white/60 border border-white/10 transition-all duration-200 hover:bg-white/[0.04]"
+                  className="flex-1 py-2.5 rounded-full text-sm font-medium text-gray-900/60 border border-white/10 transition-all duration-200 hover:bg-white/[0.04]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={addLoading}
-                  className="flex-1 py-2.5 rounded-full text-sm font-semibold text-white transition-all duration-200 hover:brightness-110 disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-full text-sm font-semibold text-gray-900 transition-all duration-200 hover:brightness-110 disabled:opacity-50"
                   style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)', boxShadow: '0 4px 14px rgba(59,130,246,0.3)' }}
                 >
                   {addLoading ? 'Adding…' : 'Add Camera'}

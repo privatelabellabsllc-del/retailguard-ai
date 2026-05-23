@@ -24,10 +24,10 @@ interface Shift {
 }
 
 const roleBadge: Record<string, { bg: string; text: string; label: string }> = {
-  owner: { bg: 'bg-purple-500/20', text: 'text-purple-400', label: 'Owner' },
-  manager: { bg: 'bg-blue-500/20', text: 'text-blue-400', label: 'Manager' },
-  clerk: { bg: 'bg-green-500/20', text: 'text-green-400', label: 'Clerk' },
-  viewer: { bg: 'bg-gray-500/20', text: 'text-gray-400', label: 'Viewer' },
+  owner: { bg: 'bg-purple-500/20', text: 'text-purple-600', label: 'Owner' },
+  manager: { bg: 'bg-blue-500/20', text: 'text-blue-600', label: 'Manager' },
+  clerk: { bg: 'bg-green-500/20', text: 'text-green-600', label: 'Clerk' },
+  viewer: { bg: 'bg-gray-500/20', text: 'text-gray-500', label: 'Viewer' },
 };
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -140,13 +140,13 @@ export default function TeamPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1C1C1E] text-white relative">
+    <div className="min-h-screen bg-[#F5F5F7] text-gray-900 relative">
       {/* Header */}
       <div className="px-8 pt-8 pb-4 flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Team</h1>
         <button
           onClick={() => setModalOpen(true)}
-          className="px-5 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-full transition-all duration-200 active:scale-95"
+          className="px-5 py-2.5 bg-blue-500 hover:bg-blue-600 text-gray-900 text-sm font-medium rounded-full transition-all duration-200 active:scale-95"
         >
           <span className="flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -164,7 +164,7 @@ export default function TeamPage() {
             <div className="w-8 h-8 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />
           </div>
         ) : members.length === 0 ? (
-          <div className="text-center py-20 text-white/40">
+          <div className="text-center py-20 text-gray-900/40">
             <p className="text-lg">No team members yet</p>
             <p className="text-sm mt-1">Add your first team member to get started</p>
           </div>
@@ -176,12 +176,12 @@ export default function TeamPage() {
                 <button
                   key={member.id}
                   onClick={() => openPanel(member)}
-                  className="group text-left bg-white/[0.05] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5 hover:bg-white/[0.08] hover:border-white/[0.12] hover:shadow-lg hover:shadow-black/20 transition-all duration-200 active:scale-[0.98]"
+                  className="group text-left bg-white/[0.05] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-5 hover:bg-white/[0.08] hover:border-white/[0.12] hover:shadow-sm hover:shadow-black/20 transition-all duration-200 active:scale-[0.98]"
                 >
                   <div className="flex items-start gap-4">
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center text-sm font-semibold text-white/90">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center text-sm font-semibold text-gray-900/90">
                         {member.avatarUrl ? (
                           <img src={member.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
                         ) : (
@@ -196,8 +196,8 @@ export default function TeamPage() {
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-white/90 truncate">{member.fullName}</p>
-                      <p className="text-xs text-white/40 truncate mt-0.5">@{member.username}</p>
+                      <p className="font-semibold text-gray-900/90 truncate">{member.fullName}</p>
+                      <p className="text-xs text-gray-900/40 truncate mt-0.5">@{member.username}</p>
                       <span
                         className={`inline-block mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}
                       >
@@ -206,7 +206,7 @@ export default function TeamPage() {
                     </div>
                   </div>
                   {member.clockedIn && (
-                    <div className="mt-3 pt-3 border-t border-white/[0.06] flex items-center gap-1.5 text-xs text-green-400/80">
+                    <div className="mt-3 pt-3 border-t border-white/[0.06] flex items-center gap-1.5 text-xs text-green-600/80">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                       On duty · {formatElapsed(member.clockInTime)}
                     </div>
@@ -220,11 +220,11 @@ export default function TeamPage() {
 
       {/* Shift Schedule */}
       <div className="px-8 pb-8">
-        <h2 className="text-xl font-semibold mb-4 text-white/90">Shift Schedule</h2>
+        <h2 className="text-xl font-semibold mb-4 text-gray-900/90">Shift Schedule</h2>
         <div className="bg-white/[0.05] backdrop-blur-xl border border-white/[0.08] rounded-2xl overflow-hidden">
           <div className="grid grid-cols-7 border-b border-white/[0.06]">
             {DAYS.map((day) => (
-              <div key={day} className="px-3 py-3 text-center text-xs font-medium text-white/50 uppercase tracking-wider">
+              <div key={day} className="px-3 py-3 text-center text-xs font-medium text-gray-900/50 uppercase tracking-wider">
                 {day}
               </div>
             ))}
@@ -246,15 +246,15 @@ export default function TeamPage() {
                           minHeight: `${height}px`,
                         }}
                       >
-                        <p className="font-medium text-white/80 truncate">{shift.userName}</p>
-                        <p className="text-white/40 mt-0.5">
+                        <p className="font-medium text-gray-900/80 truncate">{shift.userName}</p>
+                        <p className="text-gray-900/40 mt-0.5">
                           {shift.startHour}:00–{shift.endHour}:00
                         </p>
                       </div>
                     );
                   })}
                   {dayShifts.length === 0 && (
-                    <div className="h-full flex items-center justify-center text-white/10 text-xs">—</div>
+                    <div className="h-full flex items-center justify-center text-gray-900/10 text-xs">—</div>
                   )}
                 </div>
               );
@@ -278,15 +278,15 @@ export default function TeamPage() {
         />
         {/* Panel */}
         <div
-          className={`absolute right-0 top-0 bottom-0 w-full max-w-md bg-[#2C2C2E]/95 backdrop-blur-2xl border-l border-white/[0.08] shadow-2xl transition-transform duration-300 ease-out ${
+          className={`absolute right-0 top-0 bottom-0 w-full max-w-md bg-white/95 backdrop-blur-2xl border-l border-white/[0.08] shadow-lg transition-transform duration-300 ease-out ${
             panelOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
           {selectedMember && (
             <div className="h-full overflow-y-auto">
               {/* Panel header */}
-              <div className="sticky top-0 z-10 bg-[#2C2C2E]/80 backdrop-blur-xl border-b border-white/[0.06] px-6 py-4 flex items-center justify-between">
-                <h3 className="font-semibold text-white/90">Member Details</h3>
+              <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-white/[0.06] px-6 py-4 flex items-center justify-between">
+                <h3 className="font-semibold text-gray-900/90">Member Details</h3>
                 <button
                   onClick={closePanel}
                   className="w-8 h-8 rounded-full bg-white/[0.08] hover:bg-white/[0.12] flex items-center justify-center transition-colors duration-200"
@@ -309,8 +309,8 @@ export default function TeamPage() {
                   </div>
                   <div>
                     <p className="text-lg font-semibold">{selectedMember.fullName}</p>
-                    <p className="text-sm text-white/40">@{selectedMember.username}</p>
-                    <p className="text-sm text-white/40">{selectedMember.email}</p>
+                    <p className="text-sm text-gray-900/40">@{selectedMember.username}</p>
+                    <p className="text-sm text-gray-900/40">{selectedMember.email}</p>
                   </div>
                 </div>
 
@@ -328,7 +328,7 @@ export default function TeamPage() {
 
                 {/* Status Card */}
                 <div className="bg-white/[0.05] rounded-xl p-4 space-y-3">
-                  <h4 className="text-sm font-medium text-white/60 uppercase tracking-wider">Current Shift</h4>
+                  <h4 className="text-sm font-medium text-gray-900/60 uppercase tracking-wider">Current Shift</h4>
                   <div className="flex items-center gap-2">
                     <div
                       className={`w-2.5 h-2.5 rounded-full ${
@@ -339,7 +339,7 @@ export default function TeamPage() {
                       {selectedMember.clockedIn ? 'On Duty' : 'Off Duty'}
                     </span>
                     {selectedMember.clockedIn && selectedMember.clockInTime && (
-                      <span className="text-sm text-white/40 ml-auto">
+                      <span className="text-sm text-gray-900/40 ml-auto">
                         {formatElapsed(selectedMember.clockInTime)}
                       </span>
                     )}
@@ -348,16 +348,16 @@ export default function TeamPage() {
 
                 {/* Weekly Hours */}
                 <div className="bg-white/[0.05] rounded-xl p-4">
-                  <h4 className="text-sm font-medium text-white/60 uppercase tracking-wider mb-2">This Week</h4>
+                  <h4 className="text-sm font-medium text-gray-900/60 uppercase tracking-wider mb-2">This Week</h4>
                   <p className="text-3xl font-bold tracking-tight">
                     {selectedMember.weeklyHours ?? 0}
-                    <span className="text-base font-normal text-white/40 ml-1">hrs</span>
+                    <span className="text-base font-normal text-gray-900/40 ml-1">hrs</span>
                   </p>
                 </div>
 
                 {/* Quick Actions */}
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-white/60 uppercase tracking-wider mb-3">Quick Actions</h4>
+                  <h4 className="text-sm font-medium text-gray-900/60 uppercase tracking-wider mb-3">Quick Actions</h4>
                   {selectedMember.clockedIn ? (
                     <button
                       onClick={handleClockOut}
@@ -370,15 +370,15 @@ export default function TeamPage() {
                     <button
                       onClick={handleClockIn}
                       disabled={clockLoading}
-                      className="w-full py-3 rounded-xl bg-green-500/20 text-green-400 font-medium text-sm hover:bg-green-500/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
+                      className="w-full py-3 rounded-xl bg-green-500/20 text-green-600 font-medium text-sm hover:bg-green-500/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
                     >
                       {clockLoading ? 'Processing...' : '⏱ Clock In'}
                     </button>
                   )}
-                  <button className="w-full py-3 rounded-xl bg-white/[0.05] text-white/80 font-medium text-sm hover:bg-white/[0.08] transition-all duration-200 active:scale-[0.98]">
+                  <button className="w-full py-3 rounded-xl bg-white/[0.05] text-gray-900/80 font-medium text-sm hover:bg-white/[0.08] transition-all duration-200 active:scale-[0.98]">
                     ✏️ Edit Member
                   </button>
-                  <button className="w-full py-3 rounded-xl bg-white/[0.05] text-white/80 font-medium text-sm hover:bg-white/[0.08] transition-all duration-200 active:scale-[0.98]">
+                  <button className="w-full py-3 rounded-xl bg-white/[0.05] text-gray-900/80 font-medium text-sm hover:bg-white/[0.08] transition-all duration-200 active:scale-[0.98]">
                     📊 View Performance
                   </button>
                 </div>
@@ -395,76 +395,76 @@ export default function TeamPage() {
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setModalOpen(false)}
           />
-          <div className="relative w-full max-w-md bg-[#2C2C2E] border border-white/[0.1] rounded-2xl shadow-2xl overflow-hidden animate-[scaleIn_200ms_ease-out]">
+          <div className="relative w-full max-w-md bg-white border border-white/[0.1] rounded-2xl shadow-lg overflow-hidden animate-[scaleIn_200ms_ease-out]">
             <div className="px-6 py-5 border-b border-white/[0.06]">
               <h3 className="text-lg font-semibold">Add Team Member</h3>
-              <p className="text-sm text-white/40 mt-0.5">Create a new account for your team</p>
+              <p className="text-sm text-gray-900/40 mt-0.5">Create a new account for your team</p>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-white/60 mb-1.5">Username</label>
+                <label className="block text-sm font-medium text-gray-900/60 mb-1.5">Username</label>
                 <input
                   type="text"
                   value={newMember.username}
                   onChange={(e) => setNewMember({ ...newMember, username: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all duration-200"
+                  className="w-full px-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-xl text-gray-900 placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all duration-200"
                   placeholder="johndoe"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/60 mb-1.5">Password</label>
+                <label className="block text-sm font-medium text-gray-900/60 mb-1.5">Password</label>
                 <input
                   type="password"
                   value={newMember.password}
                   onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all duration-200"
+                  className="w-full px-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-xl text-gray-900 placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all duration-200"
                   placeholder="••••••••"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/60 mb-1.5">Full Name</label>
+                <label className="block text-sm font-medium text-gray-900/60 mb-1.5">Full Name</label>
                 <input
                   type="text"
                   value={newMember.fullName}
                   onChange={(e) => setNewMember({ ...newMember, fullName: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all duration-200"
+                  className="w-full px-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-xl text-gray-900 placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all duration-200"
                   placeholder="John Doe"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/60 mb-1.5">Email</label>
+                <label className="block text-sm font-medium text-gray-900/60 mb-1.5">Email</label>
                 <input
                   type="email"
                   value={newMember.email}
                   onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all duration-200"
+                  className="w-full px-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-xl text-gray-900 placeholder-white/30 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all duration-200"
                   placeholder="john@example.com"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/60 mb-1.5">Role</label>
+                <label className="block text-sm font-medium text-gray-900/60 mb-1.5">Role</label>
                 <select
                   value={newMember.role}
                   onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-xl text-white focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all duration-200 appearance-none"
+                  className="w-full px-4 py-2.5 bg-white/[0.05] border border-white/[0.1] rounded-xl text-gray-900 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all duration-200 appearance-none"
                 >
-                  <option value="clerk" className="bg-[#2C2C2E]">Clerk</option>
-                  <option value="manager" className="bg-[#2C2C2E]">Manager</option>
-                  <option value="viewer" className="bg-[#2C2C2E]">Viewer</option>
+                  <option value="clerk" className="bg-white">Clerk</option>
+                  <option value="manager" className="bg-white">Manager</option>
+                  <option value="viewer" className="bg-white">Viewer</option>
                 </select>
               </div>
             </div>
             <div className="px-6 py-4 border-t border-white/[0.06] flex justify-end gap-3">
               <button
                 onClick={() => setModalOpen(false)}
-                className="px-5 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:text-white/80 hover:bg-white/[0.05] transition-all duration-200"
+                className="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-900/60 hover:text-gray-900/80 hover:bg-white/[0.05] transition-all duration-200"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddMember}
                 disabled={!newMember.username || !newMember.password || !newMember.fullName}
-                className="px-5 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+                className="px-5 py-2.5 bg-blue-500 hover:bg-blue-600 text-gray-900 text-sm font-medium rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
               >
                 Add Member
               </button>

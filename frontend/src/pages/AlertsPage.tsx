@@ -97,10 +97,10 @@ export default function AlertsPage() {
   };
 
   const severityConfig: Record<string, { color: string; bg: string; border: string; dot: string }> = {
-    critical: { color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', dot: 'bg-red-400' },
+    critical: { color: 'text-red-600', bg: 'bg-red-500/10', border: 'border-red-500/30', dot: 'bg-red-400' },
     high: { color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30', dot: 'bg-orange-400' },
-    medium: { color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', dot: 'bg-yellow-400' },
-    low: { color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30', dot: 'bg-blue-400' },
+    medium: { color: 'text-yellow-600', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', dot: 'bg-yellow-400' },
+    low: { color: 'text-blue-600', bg: 'bg-blue-500/10', border: 'border-blue-500/30', dot: 'bg-blue-400' },
   };
 
   const typeIcon = (type?: string) => {
@@ -137,17 +137,17 @@ export default function AlertsPage() {
   if (loading) {
     return (
       <div className="p-8 space-y-6 max-w-[1400px] mx-auto">
-        <div><h1 className="text-3xl font-bold text-white tracking-tight">Alerts</h1></div>
+        <div><h1 className="text-3xl font-bold text-gray-900 tracking-tight">Alerts</h1></div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-[#2C2C2E]/80 rounded-2xl p-4 border border-white/5 animate-pulse">
+            <div key={i} className="bg-white/80 rounded-2xl p-4 border border-white/5 animate-pulse">
               <div className="h-3 bg-white/10 rounded w-16 mb-2" />
               <div className="h-7 bg-white/10 rounded w-10" />
             </div>
           ))}
         </div>
         {[1, 2, 3].map(i => (
-          <div key={i} className="bg-[#2C2C2E]/80 rounded-2xl p-5 border border-white/5 animate-pulse">
+          <div key={i} className="bg-white/80 rounded-2xl p-5 border border-white/5 animate-pulse">
             <div className="h-4 bg-white/10 rounded w-3/4 mb-3" />
             <div className="h-3 bg-white/10 rounded w-1/2" />
           </div>
@@ -161,15 +161,15 @@ export default function AlertsPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Alerts</h1>
-          <p className="text-sm text-gray-400 mt-1">Security alerts & notifications</p>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Alerts</h1>
+          <p className="text-sm text-gray-500 mt-1">Security alerts & notifications</p>
         </div>
-        <div className="flex items-center gap-2 bg-[#2C2C2E]/80 backdrop-blur-xl rounded-full px-4 py-2 border border-white/5">
+        <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xl rounded-full px-4 py-2 border border-white/5">
           <span className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-400" />
           </span>
-          <span className="text-xs text-green-400 font-medium">Live monitoring active</span>
+          <span className="text-xs text-green-600 font-medium">Live monitoring active</span>
         </div>
       </div>
 
@@ -185,14 +185,14 @@ export default function AlertsPage() {
               className={`rounded-2xl p-4 border transition-all duration-200 ${
                 severityFilter === sev
                   ? `${cfg.bg} ${cfg.border}`
-                  : 'bg-[#2C2C2E]/80 border-white/5 hover:border-white/10'
+                  : 'bg-white/80 border-white/5 hover:border-white/10'
               }`}
             >
               <div className="flex items-center gap-2 mb-1">
                 <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
                 <span className={`text-xs uppercase tracking-wider font-medium ${cfg.color}`}>{sev}</span>
               </div>
-              <p className="text-2xl font-bold text-white">{count}</p>
+              <p className="text-2xl font-bold text-gray-900">{count}</p>
             </button>
           );
         })}
@@ -200,15 +200,15 @@ export default function AlertsPage() {
 
       {/* Filters */}
       <div className="flex items-center gap-4">
-        <div className="flex gap-1 bg-[#2C2C2E]/60 backdrop-blur-xl rounded-xl p-1">
+        <div className="flex gap-1 bg-white/60 backdrop-blur-xl rounded-xl p-1">
           {(['all', 'active', 'acknowledged'] as StatusFilter[]).map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 statusFilter === s
-                  ? 'bg-[#3A3A3C] text-white shadow-sm'
-                  : 'text-gray-400 hover:text-gray-300'
+                  ? 'bg-gray-100 text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-600'
               }`}
             >
               {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -226,7 +226,7 @@ export default function AlertsPage() {
           return (
             <div
               key={alert.id}
-              className={`bg-[#2C2C2E]/80 backdrop-blur-xl rounded-2xl p-5 border transition-all duration-300 hover:border-white/10 ${
+              className={`bg-white/80 backdrop-blur-xl rounded-2xl p-5 border transition-all duration-300 hover:border-white/10 ${
                 offender
                   ? 'border-red-500/40 ring-1 ring-red-500/10'
                   : alert.status === 'acknowledged'
@@ -251,12 +251,12 @@ export default function AlertsPage() {
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <p className="text-sm font-semibold text-white">{alert.title}</p>
+                    <p className="text-sm font-semibold text-gray-900">{alert.title}</p>
                     <span className={`px-2 py-0.5 text-[10px] rounded-full font-medium ${cfg.bg} ${cfg.color}`}>
                       {alert.priority.toUpperCase()}
                     </span>
                     {offender && (
-                      <span className="px-2 py-0.5 text-[10px] rounded-full font-bold bg-red-500/20 text-red-400 animate-pulse">
+                      <span className="px-2 py-0.5 text-[10px] rounded-full font-bold bg-red-500/20 text-red-600 animate-pulse">
                         ⚠️ KNOWN OFFENDER
                       </span>
                     )}
@@ -266,7 +266,7 @@ export default function AlertsPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-300 mb-2">{alert.message || 'Security event detected'}</p>
+                  <p className="text-sm text-gray-600 mb-2">{alert.message || 'Security event detected'}</p>
                   <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
                     <span>{formatTime(alert.created_at)}</span>
                     {alert.current_camera_id && (
@@ -278,13 +278,13 @@ export default function AlertsPage() {
                     {alert.person_display_name && (
                       <>
                         <span>•</span>
-                        <span className="text-purple-400">👤 {alert.person_display_name}</span>
+                        <span className="text-purple-600">👤 {alert.person_display_name}</span>
                       </>
                     )}
                     {alert.match_confidence && (
                       <>
                         <span>•</span>
-                        <span className="text-blue-400">
+                        <span className="text-blue-600">
                           {Math.round((alert.match_confidence > 1 ? alert.match_confidence : alert.match_confidence * 100))}% match
                         </span>
                       </>
@@ -292,7 +292,7 @@ export default function AlertsPage() {
                     {alert.person_total_thefts !== undefined && alert.person_total_thefts > 0 && (
                       <>
                         <span>•</span>
-                        <span className="text-red-400">{alert.person_total_thefts} prior theft{alert.person_total_thefts > 1 ? 's' : ''}</span>
+                        <span className="text-red-600">{alert.person_total_thefts} prior theft{alert.person_total_thefts > 1 ? 's' : ''}</span>
                       </>
                     )}
                   </div>
@@ -304,7 +304,7 @@ export default function AlertsPage() {
                     <button
                       onClick={() => handleAcknowledge(alert.id)}
                       disabled={actionLoading === alert.id}
-                      className="px-3 py-1.5 bg-[#3A3A3C] hover:bg-[#48484A] text-white text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-50"
+                      className="px-3 py-1.5 bg-gray-100 hover:bg-[#48484A] text-gray-900 text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-50"
                     >
                       {actionLoading === alert.id ? '...' : 'Acknowledge'}
                     </button>
@@ -314,7 +314,7 @@ export default function AlertsPage() {
                       <button
                         onClick={() => handleAction(alert.id, 'call_police')}
                         disabled={!!actionLoading}
-                        className="px-3 py-1.5 bg-red-500/10 text-red-400 text-xs font-medium rounded-lg hover:bg-red-500/20 transition-all duration-200 disabled:opacity-50"
+                        className="px-3 py-1.5 bg-red-500/10 text-red-600 text-xs font-medium rounded-lg hover:bg-red-500/20 transition-all duration-200 disabled:opacity-50"
                       >
                         🚔 Police
                       </button>
@@ -328,7 +328,7 @@ export default function AlertsPage() {
                       <button
                         onClick={() => handleAction(alert.id, 'blacklist')}
                         disabled={!!actionLoading}
-                        className="px-3 py-1.5 bg-purple-500/10 text-purple-400 text-xs font-medium rounded-lg hover:bg-purple-500/20 transition-all duration-200 disabled:opacity-50"
+                        className="px-3 py-1.5 bg-purple-500/10 text-purple-600 text-xs font-medium rounded-lg hover:bg-purple-500/20 transition-all duration-200 disabled:opacity-50"
                       >
                         🚫 Blacklist
                       </button>
@@ -340,7 +340,7 @@ export default function AlertsPage() {
               {/* Known Offender Extra Info */}
               {offender && (
                 <div className="mt-4 pt-4 border-t border-red-500/10 flex items-center gap-3 flex-wrap">
-                  <span className="text-xs text-red-400">⚠️ This individual has previous theft records.</span>
+                  <span className="text-xs text-red-600">⚠️ This individual has previous theft records.</span>
                   {alert.person_threat_level && (
                     <span className="text-xs text-orange-400">Threat Level: {'🔴'.repeat(alert.person_threat_level)}{'⚪'.repeat(4 - alert.person_threat_level)}</span>
                   )}
