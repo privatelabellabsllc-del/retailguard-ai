@@ -87,7 +87,7 @@ class Incident(Base):
     #         moved hand to right front pocket. Item no longer visible in hand."
     
     # Review
-    reviewed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     reviewed_at = Column(DateTime, nullable=True)
     review_notes = Column(Text, nullable=True)
     
@@ -151,7 +151,7 @@ class IncidentReview(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     incident_id = Column(UUID(as_uuid=True), ForeignKey("incidents.id"), nullable=False, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     
     action = Column(String(50), nullable=False)  # "marked_theft", "marked_not_theft", "escalated", etc.
     previous_status = Column(String(50), nullable=True)
