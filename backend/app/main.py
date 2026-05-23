@@ -246,7 +246,7 @@ def reset_and_seed():
             detected_at=datetime.utcnow() - timedelta(hours=1),
             estimated_item="Wireless Earbuds",
             estimated_value=49.99,
-            theft_classification=TheftClassification.LIKELY_THEFT,
+            theft_classification="likely_theft",
             classification_confidence=0.82,
             classification_reason="Concealed 1 item, bypassed register, exited store within 45 seconds.",
             visited_register=False,

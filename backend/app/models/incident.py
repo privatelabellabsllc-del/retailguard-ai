@@ -72,9 +72,7 @@ class Incident(Base):
     detected_at = Column(DateTime, nullable=False, index=True)
     
     # Theft Classification (from zone tracker journey analysis)
-    theft_classification = Column(
-        SAEnum(TheftClassification), default=TheftClassification.UNDER_REVIEW
-    )
+    theft_classification = Column(String(50), default="under_review")
     classification_confidence = Column(Float, nullable=True)
     classification_reason = Column(Text, nullable=True)
     visited_register = Column(Boolean, default=False)
