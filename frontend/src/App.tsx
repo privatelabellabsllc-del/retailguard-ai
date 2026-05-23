@@ -1,62 +1,89 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import React, { Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import ReviewQueuePage from './pages/ReviewQueuePage';
-import AlertsPage from './pages/AlertsPage';
-import OffendersPage from './pages/OffendersPage';
-import BlacklistPage from './pages/BlacklistPage';
-import CamerasPage from './pages/CamerasPage';
-import PersonDetailPage from './pages/PersonDetailPage';
-import { getMe } from './services/api';
-import type { User } from './types';
 
-function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+// Lazy-loaded pages
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
+const ReviewQueuePage = React.lazy(() => import('./pages/ReviewQueuePage'));
+const AlertsPage = React.lazy(() => import('./pages/AlertsPage'));
+const OffendersPage = React.lazy(() => import('./pages/OffendersPage'));
+const BlacklistPage = React.lazy(() => import('./pages/BlacklistPage'));
+const TrafficPage = React.lazy(() => import('./pages/TrafficPage'));
+const CalendarPage = React.lazy(() => import('./pages/CalendarPage'));
+const HeatmapPage = React.lazy(() => import('./pages/HeatmapPage'));
+const ShelvesPage = React.lazy(() => import('./pages/ShelvesPage'));
+const TeamPage = React.lazy(() => import('./pages/TeamPage'));
+const PerformancePage = React.lazy(() => import('./pages/PerformancePage'));
+const CashPage = React.lazy(() => import('./pages/CashPage'));
+const ScannerPage = React.lazy(() => import('./pages/ScannerPage'));
+const RevenuePage = React.lazy(() => import('./pages/RevenuePage'));
+const CamerasPage = React.lazy(() => import('./pages/CamerasPage'));
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      getMe()
-        .then((res) => setUser(res.data))
-        .catch(() => localStorage.removeItem('token'))
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
-  }, []);
+// Auth guard component
+const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+};
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading RetailGuard AI...</p>
-        </div>
+// Loading spinner
+const LoadingSpinner: React.FC = () => (
+  <div className="min-h-screen flex items-center justify-center" style={{ background: '#1C1C1E' }}>
+    <div className="flex flex-col items-center gap-4">
+      <div className="relative">
+        <div className="w-10 h-10 rounded-full border-2 border-white/10 border-t-blue-500 animate-spin" />
       </div>
-    );
-  }
+      <p className="text-xs text-white/30 font-medium tracking-wide">Loading…</p>
+    </div>
+  </div>
+);
 
-  if (!user) {
-    return <LoginPage onLogin={setUser} />;
-  }
-
+const App: React.FC = () => {
   return (
-    <Layout user={user} onLogout={() => { localStorage.removeItem('token'); setUser(null); }}>
-      <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/review" element={<ReviewQueuePage />} />
-        <Route path="/alerts" element={<AlertsPage />} />
-        <Route path="/offenders" element={<OffendersPage />} />
-        <Route path="/blacklist" element={<BlacklistPage />} />
-        <Route path="/cameras" element={<CamerasPage />} />
-        <Route path="/person/:id" element={<PersonDetailPage />} />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </Layout>
+    <BrowserRouter>
+      <Suspense fallback={<LoadingSpinner />}>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* Protected routes with layout */}
+          <Route
+            element={
+              <AuthGuard>
+                <Layout />
+              </AuthGuard>
+            }
+          >
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/review" element={<ReviewQueuePage />} />
+            <Route path="/alerts" element={<AlertsPage />} />
+            <Route path="/offenders" element={<OffendersPage />} />
+            <Route path="/blacklist" element={<BlacklistPage />} />
+            <Route path="/traffic" element={<TrafficPage />} />
+            <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/heatmap" element={<HeatmapPage />} />
+            <Route path="/shelves" element={<ShelvesPage />} />
+            <Route path="/fridge" element={<HeatmapPage />} />
+            <Route path="/team" element={<TeamPage />} />
+            <Route path="/performance" element={<PerformancePage />} />
+            <Route path="/cash" element={<CashPage />} />
+            <Route path="/scanner" element={<ScannerPage />} />
+            <Route path="/revenue" element={<RevenuePage />} />
+            <Route path="/cameras" element={<CamerasPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+
+          {/* Default redirect */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
   );
-}
+};
 
 export default App;

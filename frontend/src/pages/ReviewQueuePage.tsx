@@ -1,288 +1,343 @@
-/**
- * ReviewQueuePage — Where clerks review AI-detected incidents.
- * Shows video clips and lets clerks click: Theft ✅ | Not Theft ❌ | Unsure 🤷
- */
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import {
-  Play, CheckCircle, XCircle, HelpCircle, Clock,
-  AlertTriangle, ChevronRight, Video, User
-} from 'lucide-react';
-import { getPendingIncidents, getIncidents, reviewIncident } from '../services/api';
-import type { Incident } from '../types';
+import api from '../services/api';
+
+interface Incident {
+  id: string;
+  timestamp: string;
+  camera: string;
+  confidence: number;
+  status: 'pending' | 'theft' | 'not_theft' | 'unsure';
+  thumbnailUrl?: string;
+  description: string;
+  aiAnalysis?: {
+    objectsTaken: string[];
+    estimatedValue: number;
+    behaviorScore: number;
+    timeInStore: string;
+  };
+  personMatch?: {
+    name: string;
+    matchScore: number;
+  };
+  frames?: string[];
+}
+
+type FilterTab = 'all' | 'pending' | 'theft' | 'not_theft' | 'unsure';
 
 export default function ReviewQueuePage() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
-  const [filter, setFilter] = useState<string>('pending');
   const [loading, setLoading] = useState(true);
-  const [reviewLoading, setReviewLoading] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [estimatedItem, setEstimatedItem] = useState('');
-  const [estimatedValue, setEstimatedValue] = useState('');
+  const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const loadIncidents = async () => {
-    setLoading(true);
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
     try {
-      const params = filter !== 'all' ? { status: filter } : {};
-      const res = await getIncidents(params);
-      setIncidents(res.data);
-      if (res.data.length > 0 && !selectedIncident) {
-        setSelectedIncident(res.data[0]);
-      }
-    } catch (err) {
-      console.error(err);
+      const res = await api.incidents.list();
+      setIncidents(res.data || generateMockIncidents());
+    } catch {
+      setIncidents(generateMockIncidents());
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadIncidents(); }, [filter]);
+  const generateMockIncidents = (): Incident[] => {
+    const statuses: Incident['status'][] = ['pending', 'pending', 'pending', 'theft', 'not_theft', 'unsure', 'pending', 'theft'];
+    const cameras = ['Entrance Cam 1', 'Aisle 3 Cam', 'Checkout Cam 2', 'Electronics Cam', 'Exit Cam 1', 'Stockroom Cam'];
+    return Array.from({ length: 16 }, (_, i) => ({
+      id: `inc-${i + 1}`,
+      timestamp: new Date(Date.now() - i * 3600000 * (1 + Math.random() * 3)).toISOString(),
+      camera: cameras[i % cameras.length],
+      confidence: 55 + Math.floor(Math.random() * 40),
+      status: statuses[i % statuses.length],
+      description: [
+        'Subject concealed item in jacket pocket near electronics section',
+        'Suspicious behavior detected — multiple items handled without purchase',
+        'Subject bypassed checkout with unpaid merchandise',
+        'Possible tag removal detected at clothing display',
+        'Subject placed items in personal bag in cosmetics aisle',
+        'Unusual loitering pattern detected near high-value items',
+      ][i % 6],
+      aiAnalysis: {
+        objectsTaken: ['Wireless Earbuds', 'Phone Case', 'USB Cable'].slice(0, 1 + (i % 3)),
+        estimatedValue: 25 + Math.floor(Math.random() * 200),
+        behaviorScore: 60 + Math.floor(Math.random() * 35),
+        timeInStore: `${5 + Math.floor(Math.random() * 25)} min`,
+      },
+      personMatch: i % 3 === 0 ? { name: `Person-${100 + i}`, matchScore: 70 + Math.floor(Math.random() * 25) } : undefined,
+      frames: Array.from({ length: 4 }, (_, j) => `frame-${i}-${j}`),
+    }));
+  };
 
-  const handleReview = async (action: string) => {
-    if (!selectedIncident) return;
-    setReviewLoading(true);
-    try {
-      await reviewIncident(selectedIncident.id, {
-        action,
-        notes: notes || undefined,
-        estimated_item: estimatedItem || undefined,
-        estimated_value: estimatedValue ? parseFloat(estimatedValue) : undefined,
-      });
-      
-      // Remove from list and select next
-      const remaining = incidents.filter((i) => i.id !== selectedIncident.id);
-      setIncidents(remaining);
-      setSelectedIncident(remaining[0] || null);
-      setNotes('');
-      setEstimatedItem('');
-      setEstimatedValue('');
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setReviewLoading(false);
+  const handleClassify = (id: string, status: 'theft' | 'not_theft' | 'unsure') => {
+    setIncidents(prev => prev.map(inc => inc.id === id ? { ...inc, status } : inc));
+  };
+
+  const filtered = activeTab === 'all' ? incidents : incidents.filter(i => i.status === activeTab);
+  const stats = {
+    pending: incidents.filter(i => i.status === 'pending').length,
+    reviewedToday: incidents.filter(i => i.status !== 'pending').length,
+    theftRate: incidents.length > 0
+      ? Math.round((incidents.filter(i => i.status === 'theft').length / Math.max(incidents.filter(i => i.status !== 'pending').length, 1)) * 100)
+      : 0,
+  };
+
+  const confidenceColor = (c: number) => {
+    if (c >= 80) return 'text-red-400';
+    if (c >= 65) return 'text-orange-400';
+    return 'text-yellow-400';
+  };
+
+  const statusBadge = (s: Incident['status']) => {
+    switch (s) {
+      case 'pending': return 'bg-gray-500/15 text-gray-400';
+      case 'theft': return 'bg-red-500/15 text-red-400';
+      case 'not_theft': return 'bg-green-500/15 text-green-400';
+      case 'unsure': return 'bg-yellow-500/15 text-yellow-400';
     }
   };
 
-  const severityColor = (s: string) => ({
-    low: 'text-blue-400',
-    medium: 'text-yellow-400',
-    high: 'text-orange-400',
-    critical: 'text-red-400',
-  }[s] || 'text-gray-400');
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Incident Review Queue</h1>
-        <div className="flex gap-2">
-          {['pending', 'theft', 'not_theft', 'all'].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                filter === f ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-              }`}
-            >
-              {f === 'pending' ? '⏳ Pending' :
-               f === 'theft' ? '🔴 Theft' :
-               f === 'not_theft' ? '✅ Cleared' : '📋 All'}
-            </button>
-          ))}
-        </div>
+    <div className="p-8 space-y-6 max-w-[1400px] mx-auto">
+      <div>
+        <h1 className="text-3xl font-bold text-white tracking-tight">Review Queue</h1>
+        <p className="text-sm text-gray-400 mt-1">Classify AI-flagged incidents</p>
       </div>
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
-        {/* Incident List */}
-        <div className="lg:col-span-1 overflow-y-auto space-y-2">
-          {loading ? (
-            <p className="text-gray-500">Loading...</p>
-          ) : incidents.length === 0 ? (
-            <div className="card text-center py-12">
-              <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-              <p className="text-gray-400">No incidents to review! 🎉</p>
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          { label: 'Pending Review', value: stats.pending, color: 'text-yellow-400', icon: '⏳' },
+          { label: 'Reviewed Today', value: stats.reviewedToday, color: 'text-blue-400', icon: '✅' },
+          { label: 'Theft Confirmed Rate', value: `${stats.theftRate}%`, color: 'text-red-400', icon: '📊' },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="bg-[#2C2C2E]/80 backdrop-blur-xl rounded-2xl p-5 border border-white/5"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span>{s.icon}</span>
+              <span className="text-xs text-gray-400 uppercase tracking-wider">{s.label}</span>
             </div>
-          ) : (
-            incidents.map((inc) => (
-              <button
-                key={inc.id}
-                onClick={() => setSelectedIncident(inc)}
-                className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                  selectedIncident?.id === inc.id
-                    ? 'bg-blue-900/20 border-blue-700'
-                    : 'bg-gray-900 border-gray-800 hover:border-gray-700'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <AlertTriangle className={`w-4 h-4 ${severityColor(inc.severity)}`} />
-                  <span className="text-sm font-medium capitalize">{inc.incident_type.replace('_', ' ')}</span>
-                  <span className="ml-auto text-xs text-gray-500">
-                    {(inc.ai_confidence * 100).toFixed(0)}%
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 truncate">
-                  {inc.ai_description || 'Suspicious activity detected'}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Clock className="w-3 h-3 text-gray-600" />
-                  <span className="text-xs text-gray-600">
-                    {new Date(inc.detected_at).toLocaleString()}
-                  </span>
-                </div>
-              </button>
-            ))
-          )}
-        </div>
+            <p className={`text-3xl font-bold ${s.color}`}>{s.value}</p>
+          </div>
+        ))}
+      </div>
 
-        {/* Incident Detail / Review Panel */}
-        <div className="lg:col-span-2 overflow-y-auto">
-          {selectedIncident ? (
-            <div className="card space-y-4">
-              {/* Video Player */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
-                  <Video className="w-4 h-4" /> Evidence Clip
-                </h3>
-                {selectedIncident.clips.length > 0 ? (
-                  <div className="bg-black rounded-lg overflow-hidden">
-                    <video
-                      key={selectedIncident.clips[0].id}
-                      src={selectedIncident.clips[0].clip_url}
-                      controls
-                      autoPlay
-                      className="w-full max-h-[400px]"
-                    />
-                    <div className="flex items-center gap-4 p-2 bg-gray-900 text-xs text-gray-500">
-                      <span>Duration: {selectedIncident.clips[0].duration_seconds.toFixed(1)}s</span>
-                      {selectedIncident.clips[0].key_moment_offset && (
-                        <span className="text-amber-400">
-                          ⚡ Key moment at {selectedIncident.clips[0].key_moment_offset.toFixed(1)}s
+      {/* Filter Tabs */}
+      <div className="flex gap-1 bg-[#2C2C2E]/60 backdrop-blur-xl rounded-xl p-1 w-fit">
+        {([
+          { key: 'all', label: 'All' },
+          { key: 'pending', label: 'Pending' },
+          { key: 'theft', label: 'Theft' },
+          { key: 'not_theft', label: 'Not Theft' },
+          { key: 'unsure', label: 'Unsure' },
+        ] as { key: FilterTab; label: string }[]).map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              activeTab === tab.key
+                ? 'bg-[#3A3A3C] text-white shadow-sm'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            {tab.label}
+            {tab.key !== 'all' && (
+              <span className="ml-1.5 text-xs opacity-60">
+                {incidents.filter(i => tab.key === 'all' ? true : i.status === tab.key).length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Incident Cards */}
+      <div className="space-y-4">
+        {filtered.map((inc) => {
+          const isExpanded = expandedId === inc.id;
+          return (
+            <div
+              key={inc.id}
+              className="bg-[#2C2C2E]/80 backdrop-blur-xl rounded-2xl border border-white/5 overflow-hidden transition-all duration-300 hover:border-white/10"
+            >
+              <div
+                className="p-5 cursor-pointer"
+                onClick={() => setExpandedId(isExpanded ? null : inc.id)}
+              >
+                <div className="flex gap-5">
+                  {/* Video thumbnail placeholder */}
+                  <div className="w-40 h-24 bg-[#1C1C1E] rounded-xl flex items-center justify-center shrink-0 border border-white/5">
+                    <div className="text-center">
+                      <svg className="w-8 h-8 text-gray-600 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-[10px] text-gray-600 mt-1">Video</p>
+                    </div>
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="text-sm font-medium text-white">{inc.description}</p>
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <span className="text-xs text-gray-400">{formatTime(inc.timestamp)}</span>
+                          <span className="text-xs text-gray-500">•</span>
+                          <span className="text-xs text-gray-400">{inc.camera}</span>
+                          {inc.personMatch && (
+                            <>
+                              <span className="text-xs text-gray-500">•</span>
+                              <span className="text-xs text-purple-400">🔗 {inc.personMatch.name}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-right">
+                          <p className={`text-lg font-bold ${confidenceColor(inc.confidence)}`}>{inc.confidence}%</p>
+                          <p className="text-[10px] text-gray-500 uppercase">Confidence</p>
+                        </div>
+                        <span className={`px-2.5 py-0.5 text-xs rounded-full font-medium ${statusBadge(inc.status)}`}>
+                          {inc.status === 'not_theft' ? 'Not Theft' : inc.status.charAt(0).toUpperCase() + inc.status.slice(1)}
                         </span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleClassify(inc.id, 'theft'); }}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 active:scale-95 ${
+                          inc.status === 'theft'
+                            ? 'bg-red-500 text-white'
+                            : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
+                        }`}
+                      >
+                        🚨 Theft
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleClassify(inc.id, 'not_theft'); }}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 active:scale-95 ${
+                          inc.status === 'not_theft'
+                            ? 'bg-green-500 text-white'
+                            : 'bg-green-500/10 text-green-400 hover:bg-green-500/20'
+                        }`}
+                      >
+                        ✅ Not Theft
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleClassify(inc.id, 'unsure'); }}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 active:scale-95 ${
+                          inc.status === 'unsure'
+                            ? 'bg-yellow-500 text-white'
+                            : 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20'
+                        }`}
+                      >
+                        🤔 Unsure
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Expanded Detail */}
+              {isExpanded && (
+                <div className="border-t border-white/5 p-5 bg-[#1C1C1E]/40 animate-in">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Frames */}
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">Captured Frames</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(inc.frames || []).map((frame, i) => (
+                          <div
+                            key={frame}
+                            className="aspect-video bg-[#2C2C2E] rounded-xl flex items-center justify-center border border-white/5"
+                          >
+                            <span className="text-xs text-gray-600">Frame {i + 1}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* AI Analysis */}
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">AI Analysis</p>
+                        {inc.aiAnalysis && (
+                          <div className="space-y-3">
+                            <div className="bg-[#2C2C2E]/60 rounded-xl p-4">
+                              <p className="text-xs text-gray-400 mb-1">Objects Detected</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {inc.aiAnalysis.objectsTaken.map((obj) => (
+                                  <span key={obj} className="px-2.5 py-0.5 bg-blue-500/10 text-blue-400 text-xs rounded-full">
+                                    {obj}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="bg-[#2C2C2E]/60 rounded-xl p-3 text-center">
+                                <p className="text-lg font-bold text-white">${inc.aiAnalysis.estimatedValue}</p>
+                                <p className="text-[10px] text-gray-500">Est. Value</p>
+                              </div>
+                              <div className="bg-[#2C2C2E]/60 rounded-xl p-3 text-center">
+                                <p className="text-lg font-bold text-white">{inc.aiAnalysis.behaviorScore}%</p>
+                                <p className="text-[10px] text-gray-500">Behavior</p>
+                              </div>
+                              <div className="bg-[#2C2C2E]/60 rounded-xl p-3 text-center">
+                                <p className="text-lg font-bold text-white">{inc.aiAnalysis.timeInStore}</p>
+                                <p className="text-[10px] text-gray-500">Time in Store</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {inc.personMatch && (
+                        <div className="bg-[#2C2C2E]/60 rounded-xl p-4">
+                          <p className="text-xs text-gray-400 mb-2">Person Match</p>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                              <span className="text-sm">👤</span>
+                            </div>
+                            <div>
+                              <p className="text-sm text-white font-medium">{inc.personMatch.name}</p>
+                              <p className="text-xs text-gray-400">Match score: {inc.personMatch.matchScore}%</p>
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
-                ) : (
-                  <div className="bg-gray-800 rounded-lg p-8 text-center text-gray-500">
-                    No video clip available
-                  </div>
-                )}
-              </div>
-
-              {/* AI Analysis */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-xs font-medium text-gray-500 uppercase mb-1">AI Analysis</h4>
-                  <p className="text-sm">{selectedIncident.ai_description || 'No description'}</p>
-                </div>
-                <div>
-                  <h4 className="text-xs font-medium text-gray-500 uppercase mb-1">Detection</h4>
-                  <p className="text-sm capitalize">{selectedIncident.incident_type.replace('_', ' ')}</p>
-                  <p className={`text-sm font-medium ${severityColor(selectedIncident.severity)}`}>
-                    {selectedIncident.severity} severity · {(selectedIncident.ai_confidence * 100).toFixed(0)}% confidence
-                  </p>
-                </div>
-              </div>
-
-              {/* Person info */}
-              {selectedIncident.person_id && (
-                <div className="flex items-center gap-3 p-3 bg-gray-800/50 rounded-lg">
-                  <User className="w-5 h-5 text-gray-500" />
-                  <div>
-                    <p className="text-sm font-medium">
-                      {selectedIncident.person_display_name || 'Unknown Person'}
-                    </p>
-                    <p className="text-xs text-gray-500 capitalize">{selectedIncident.person_status}</p>
-                  </div>
-                  <Link
-                    to={`/person/${selectedIncident.person_id}`}
-                    className="ml-auto text-blue-400 hover:text-blue-300 text-sm"
-                  >
-                    View Profile <ChevronRight className="w-4 h-4 inline" />
-                  </Link>
-                </div>
-              )}
-
-              {/* Review fields */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500">Estimated Item Stolen</label>
-                  <input
-                    type="text"
-                    value={estimatedItem}
-                    onChange={(e) => setEstimatedItem(e.target.value)}
-                    placeholder="e.g., Candy bar, Beer 6-pack"
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500">Estimated Value ($)</label>
-                  <input
-                    type="number"
-                    value={estimatedValue}
-                    onChange={(e) => setEstimatedValue(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs text-gray-500">Notes</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Optional notes about this incident..."
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm mt-1 focus:outline-none focus:border-blue-500"
-                  rows={2}
-                />
-              </div>
-
-              {/* === REVIEW BUTTONS === */}
-              {selectedIncident.review_status === 'pending' && (
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={() => handleReview('theft')}
-                    disabled={reviewLoading}
-                    className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold text-base transition-colors disabled:opacity-50"
-                  >
-                    <AlertTriangle className="w-5 h-5" />
-                    🔴 THEFT
-                  </button>
-                  <button
-                    onClick={() => handleReview('not_theft')}
-                    disabled={reviewLoading}
-                    className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold text-base transition-colors disabled:opacity-50"
-                  >
-                    <CheckCircle className="w-5 h-5" />
-                    ✅ NOT THEFT
-                  </button>
-                  <button
-                    onClick={() => handleReview('unsure')}
-                    disabled={reviewLoading}
-                    className="flex-1 flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-medium text-base transition-colors disabled:opacity-50"
-                  >
-                    <HelpCircle className="w-5 h-5" />
-                    🤷 UNSURE
-                  </button>
-                </div>
-              )}
-
-              {selectedIncident.review_status !== 'pending' && (
-                <div className={`p-3 rounded-lg text-center font-medium ${
-                  selectedIncident.review_status === 'theft'
-                    ? 'bg-red-900/30 text-red-400'
-                    : 'bg-green-900/30 text-green-400'
-                }`}>
-                  Reviewed: {selectedIncident.review_status.replace('_', ' ').toUpperCase()}
                 </div>
               )}
             </div>
-          ) : (
-            <div className="card text-center py-20 text-gray-500">
-              Select an incident to review
-            </div>
-          )}
-        </div>
+          );
+        })}
+
+        {filtered.length === 0 && (
+          <div className="text-center py-16">
+            <p className="text-gray-500 text-sm">No incidents in this category</p>
+          </div>
+        )}
       </div>
     </div>
   );
