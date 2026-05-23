@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, Text, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -8,7 +9,7 @@ class Shift(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
     scheduled_start = Column(DateTime(timezone=True), nullable=True)
     scheduled_end = Column(DateTime(timezone=True), nullable=True)
     actual_start = Column(DateTime(timezone=True), nullable=True)
@@ -29,7 +30,7 @@ class PerformanceMetric(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
     date = Column(DateTime(timezone=True), nullable=False, index=True)
     overall_score = Column(Float, nullable=True)
     transactions_per_hour = Column(Float, nullable=True)
@@ -51,7 +52,7 @@ class PerformanceReview(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
     period_start = Column(DateTime(timezone=True), nullable=False)
     period_end = Column(DateTime(timezone=True), nullable=False)
     overall_score = Column(Float, nullable=True)

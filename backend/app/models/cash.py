@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, Text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -7,7 +8,7 @@ class CashSession(Base):
     __tablename__ = "cash_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
     register_id = Column(String(50), nullable=False)
     clerk_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     shift_id = Column(Integer, ForeignKey("shifts.id"), nullable=True)
@@ -28,7 +29,7 @@ class CashTransaction(Base):
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(Integer, ForeignKey("cash_sessions.id"), nullable=False)
     clerk_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
     transaction_type = Column(String(30), nullable=False)  # sale, refund, no_sale, payout, drop, pickup
     amount = Column(Float, nullable=False)
     payment_method = Column(String(30), default="cash")  # cash, card, mixed
@@ -46,7 +47,7 @@ class CashAlert(Base):
     session_id = Column(Integer, ForeignKey("cash_sessions.id"), nullable=True)
     transaction_id = Column(Integer, ForeignKey("cash_transactions.id"), nullable=True)
     clerk_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
     alert_type = Column(String(50), nullable=False)  # no_sale, variance, sweethearting, unusual_refund, drawer_open
     severity = Column(String(20), default="medium")  # low, medium, high, critical
     description = Column(Text, nullable=True)

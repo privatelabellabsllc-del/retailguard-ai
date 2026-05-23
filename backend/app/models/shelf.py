@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, Text, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -7,8 +8,8 @@ class Shelf(Base):
     __tablename__ = "shelves"
 
     id = Column(Integer, primary_key=True, index=True)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
-    camera_id = Column(Integer, ForeignKey("cameras.id"), nullable=True)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
+    camera_id = Column(UUID(as_uuid=True), ForeignKey("cameras.id"), nullable=True)
     name = Column(String(100), nullable=False)
     aisle = Column(String(50), nullable=True)
     section = Column(String(50), nullable=True)
@@ -38,7 +39,7 @@ class Product(Base):
     __tablename__ = "products"
 
     id = Column(Integer, primary_key=True, index=True)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
     name = Column(String(200), nullable=False)
     sku = Column(String(100), nullable=True, index=True)
     barcode = Column(String(100), nullable=True, index=True)
@@ -57,7 +58,7 @@ class OutOfStockAlert(Base):
     id = Column(Integer, primary_key=True, index=True)
     shelf_id = Column(Integer, ForeignKey("shelves.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
     detected_at = Column(DateTime(timezone=True), server_default=func.now())
     resolved_at = Column(DateTime(timezone=True), nullable=True)
     duration_minutes = Column(Integer, default=0)
@@ -71,7 +72,7 @@ class StoreScan(Base):
     __tablename__ = "store_scans"
 
     id = Column(Integer, primary_key=True, index=True)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
     scanned_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     scan_type = Column(String(50), default="full")  # full, aisle, shelf
     status = Column(String(20), default="processing")  # processing, complete, failed

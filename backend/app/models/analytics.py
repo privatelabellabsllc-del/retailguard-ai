@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, JSON, Text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from app.database import Base
 
@@ -7,8 +8,8 @@ class HeatmapData(Base):
     __tablename__ = "heatmap_data"
 
     id = Column(Integer, primary_key=True, index=True)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
-    camera_id = Column(Integer, ForeignKey("cameras.id"), nullable=False)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
+    camera_id = Column(UUID(as_uuid=True), ForeignKey("cameras.id"), nullable=False)
     zone_name = Column(String(100), nullable=True)
     grid_data = Column(JSON, nullable=False)  # 2D array of traffic density
     period_start = Column(DateTime(timezone=True), nullable=False)
@@ -22,14 +23,14 @@ class FridgeDoorEvent(Base):
     __tablename__ = "fridge_door_events"
 
     id = Column(Integer, primary_key=True, index=True)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
-    camera_id = Column(Integer, ForeignKey("cameras.id"), nullable=True)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
+    camera_id = Column(UUID(as_uuid=True), ForeignKey("cameras.id"), nullable=True)
     fridge_id = Column(String(50), nullable=False)
     fridge_name = Column(String(100), nullable=True)
     event_type = Column(String(30), nullable=False)  # opened, closed, left_open
     duration_seconds = Column(Float, nullable=True)
     grabbed_product = Column(Boolean, nullable=True)
-    person_id = Column(Integer, ForeignKey("persons.id"), nullable=True)
+    person_id = Column(UUID(as_uuid=True), ForeignKey("persons.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -37,7 +38,7 @@ class RevenueRecord(Base):
     __tablename__ = "revenue_records"
 
     id = Column(Integer, primary_key=True, index=True)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
     date = Column(DateTime(timezone=True), nullable=False, index=True)
     total_revenue = Column(Float, default=0)
     transaction_count = Column(Integer, default=0)
@@ -54,7 +55,7 @@ class DailyAnalytics(Base):
     __tablename__ = "daily_analytics"
 
     id = Column(Integer, primary_key=True, index=True)
-    location_id = Column(Integer, ForeignKey("locations.id"), nullable=False)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("locations.id"), nullable=False)
     date = Column(DateTime(timezone=True), nullable=False, index=True)
     foot_traffic = Column(Integer, default=0)
     unique_visitors = Column(Integer, default=0)
