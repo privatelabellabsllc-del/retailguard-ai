@@ -134,57 +134,93 @@ export default function CalendarPage() {
   const maxTraffic = Math.max(...daysData.map(d => d.traffic), 1);
 
   return (
-    <div className="min-h-screen p-8 space-y-6">
-      {/* Header */}
-      <div className="mb-2">
-        <h1 className="text-[28px] font-bold text-gray-900 tracking-tight">Calendar</h1>
-        <p className="text-[13px] text-gray-900/40 mt-1">Store performance at a glance</p>
+    <div className="min-h-screen p-6 lg:p-8 space-y-8">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-br from-indigo-500/10 via-blue-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
+        <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Calendar</h1>
+        <p className="text-base text-[#86868B] leading-relaxed">Store calendar with event tracking, shift schedules, and historical analytics. Plan ahead and spot trends over time.</p>
       </div>
 
-      {/* Summary Bar */}
+      {/* Summary Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Monthly Traffic', value: totalTraffic.toLocaleString(), icon: '👥' },
-          { label: 'Total Revenue', value: `$${(totalRevenue / 1000).toFixed(1)}k`, icon: '💰' },
-          { label: 'Best Day', value: bestDay ? `${MONTH_NAMES[month].slice(0,3)} ${bestDay.date}` : '—', sub: bestDay ? `$${bestDay.revenue.toLocaleString()}` : '', icon: '🏆' },
-          { label: 'Avg Daily Traffic', value: avgDaily.toLocaleString(), icon: '📊' },
-        ].map((s, i) => (
-          <div key={i} className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.05] rounded-2xl p-5 transition-all duration-300 hover:bg-white/[0.06]">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-lg">{s.icon}</span>
-              <span className="text-[12px] text-gray-900/30 font-medium">{s.label}</span>
+        {/* Monthly Traffic */}
+        <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+              </svg>
             </div>
-            <div className="text-xl font-bold text-gray-900">{s.value}</div>
-            {s.sub && <div className="text-[11px] text-gray-900/25 mt-0.5">{s.sub}</div>}
           </div>
-        ))}
+          <p className="text-2xl font-bold text-gray-900">{totalTraffic.toLocaleString()}</p>
+          <p className="text-xs text-[#86868B] mt-1">Monthly Traffic</p>
+        </div>
+
+        {/* Total Revenue */}
+        <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+              </svg>
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-gray-900">${(totalRevenue / 1000).toFixed(1)}k</p>
+          <p className="text-xs text-[#86868B] mt-1">Total Revenue</p>
+        </div>
+
+        {/* Best Day */}
+        <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+              </svg>
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-gray-900">{bestDay ? `${MONTH_NAMES[month].slice(0,3)} ${bestDay.date}` : '—'}</p>
+          <p className="text-xs text-[#86868B] mt-1">Best Day{bestDay ? ` — $${bestDay.revenue.toLocaleString()}` : ''}</p>
+        </div>
+
+        {/* Avg Daily Traffic */}
+        <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+              </svg>
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-gray-900">{avgDaily.toLocaleString()}</p>
+          <p className="text-xs text-[#86868B] mt-1">Avg Daily Traffic</p>
+        </div>
       </div>
 
       {/* Month Navigation */}
       <div className="flex items-center justify-between">
         <button
           onClick={prevMonth}
-          className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-gray-900/50 hover:text-gray-900 hover:bg-white/[0.08] transition-all duration-200"
+          className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-[#636366] hover:text-gray-900 transition-all duration-200"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M8.5 3L4.5 7L8.5 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
-        <h2 className="text-[18px] font-semibold text-gray-900">
+        <h2 className="text-lg font-semibold text-gray-900">
           {MONTH_NAMES[month]} {year}
         </h2>
         <button
           onClick={nextMonth}
-          className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-gray-900/50 hover:text-gray-900 hover:bg-white/[0.08] transition-all duration-200"
+          className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-[#636366] hover:text-gray-900 transition-all duration-200"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.5 3L9.5 7L5.5 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
       </div>
 
       {/* Calendar Grid */}
-      <div className={`bg-white/[0.03] backdrop-blur-xl border border-white/[0.05] rounded-2xl p-4 transition-opacity duration-500 ${loading ? 'opacity-50' : 'opacity-100'}`}>
+      <div className={`bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-4 transition-opacity duration-500 ${loading ? 'opacity-50' : 'opacity-100'}`}>
         {/* Day Names */}
         <div className="grid grid-cols-7 mb-2">
           {DAY_NAMES.map(d => (
-            <div key={d} className="text-center text-[11px] text-gray-900/25 font-medium py-2">{d}</div>
+            <div key={d} className="text-center text-[10px] text-[#86868B] font-semibold uppercase tracking-wider py-2">{d}</div>
           ))}
         </div>
 
@@ -208,21 +244,21 @@ export default function CalendarPage() {
                 className={`
                   aspect-square rounded-xl p-2 flex flex-col items-start justify-between text-left
                   transition-all duration-200 relative group
-                  ${selected ? 'bg-blue-500/20 border-blue-500/30' : 'bg-white/[0.01] hover:bg-white/[0.05]'}
-                  ${isToday(day) ? 'ring-2 ring-blue-500/50 ring-offset-1 ring-offset-[#1C1C1E]' : ''}
-                  border border-white/[0.04]
+                  ${selected ? 'bg-blue-500/10 border-blue-500/30' : 'bg-gray-50/50 hover:bg-gray-100/80'}
+                  ${isToday(day) ? 'ring-2 ring-blue-500/50 ring-offset-1 ring-offset-white' : ''}
+                  border border-gray-200/50
                 `}
               >
-                <span className={`text-[13px] font-semibold ${isToday(day) ? 'text-blue-600' : 'text-gray-900/60'}`}>
+                <span className={`text-[13px] font-semibold ${isToday(day) ? 'text-blue-600' : 'text-gray-900'}`}>
                   {day}
                 </span>
                 {data && (
                   <div className="w-full space-y-0.5">
-                    <div className="text-[10px] text-gray-900/40 truncate">{data.traffic.toLocaleString()}</div>
-                    <div className="text-[10px] text-gray-900/25 truncate">${(data.revenue / 1000).toFixed(1)}k</div>
+                    <div className="text-[10px] text-[#636366] truncate">{data.traffic.toLocaleString()}</div>
+                    <div className="text-[10px] text-[#86868B] truncate">${(data.revenue / 1000).toFixed(1)}k</div>
                     <div className="flex items-center gap-1">
                       <div className={`w-1.5 h-1.5 rounded-full ${data.yoyChange >= 0 ? 'bg-emerald-400' : 'bg-red-400'}`} />
-                      <span className={`text-[9px] ${data.yoyChange >= 0 ? 'text-emerald-400/60' : 'text-red-600/60'}`}>
+                      <span className={`text-[9px] ${data.yoyChange >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                         {data.yoyChange >= 0 ? '+' : ''}{data.yoyChange}%
                       </span>
                     </div>
@@ -231,7 +267,7 @@ export default function CalendarPage() {
                 {/* Traffic intensity background */}
                 {data && (
                   <div
-                    className="absolute inset-0 rounded-xl bg-blue-500/5 pointer-events-none transition-opacity duration-300"
+                    className="absolute inset-0 rounded-xl bg-indigo-500/5 pointer-events-none transition-opacity duration-300"
                     style={{ opacity: data.traffic / maxTraffic * 0.5 }}
                   />
                 )}
@@ -250,21 +286,21 @@ export default function CalendarPage() {
 
       {/* Panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-[#F5F5F7]/95 backdrop-blur-2xl border-l border-white/[0.06] z-50 transition-transform duration-300 ease-out overflow-y-auto ${panelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white/95 backdrop-blur-2xl border-l border-gray-200/50 z-50 transition-transform duration-300 ease-out overflow-y-auto ${panelOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         {dayDetail && (
           <div className="p-6 space-y-6">
             {/* Panel Header */}
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-[20px] font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-gray-900">
                   {MONTH_NAMES[month]} {dayDetail.date}, {year}
                 </h3>
-                <p className="text-[12px] text-gray-900/30 mt-0.5">Daily performance report</p>
+                <p className="text-xs text-[#86868B] mt-0.5">Daily performance report</p>
               </div>
               <button
                 onClick={closePanel}
-                className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center text-gray-900/40 hover:text-gray-900 hover:bg-white/[0.1] transition-all duration-200"
+                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-[#636366] hover:text-gray-900 transition-all duration-200"
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 3L11 11M11 3L3 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               </button>
@@ -272,36 +308,36 @@ export default function CalendarPage() {
 
             {/* Quick Stats */}
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3 text-center">
+              <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-xl p-3 text-center">
                 <div className="text-lg font-bold text-gray-900">{dayDetail.hourlyTraffic.reduce((s, h) => s + h.count, 0).toLocaleString()}</div>
-                <p className="text-[10px] text-gray-900/30 mt-0.5">Visitors</p>
+                <p className="text-[10px] text-[#86868B] mt-0.5">Visitors</p>
               </div>
-              <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3 text-center">
-                <div className="text-lg font-bold text-emerald-400">${dayDetail.revenue.toLocaleString()}</div>
-                <p className="text-[10px] text-gray-900/30 mt-0.5">Revenue</p>
+              <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-xl p-3 text-center">
+                <div className="text-lg font-bold text-emerald-500">${dayDetail.revenue.toLocaleString()}</div>
+                <p className="text-[10px] text-[#86868B] mt-0.5">Revenue</p>
               </div>
-              <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3 text-center">
-                <div className="text-lg font-bold text-amber-600">{dayDetail.incidents}</div>
-                <p className="text-[10px] text-gray-900/30 mt-0.5">Incidents</p>
+              <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-xl p-3 text-center">
+                <div className="text-lg font-bold text-amber-500">{dayDetail.incidents}</div>
+                <p className="text-[10px] text-[#86868B] mt-0.5">Incidents</p>
               </div>
             </div>
 
             {/* Hourly Traffic */}
             <div>
-              <h4 className="text-[13px] font-semibold text-gray-900 mb-3">Hourly Traffic</h4>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">Hourly Traffic</h4>
               <div className="space-y-1.5">
                 {dayDetail.hourlyTraffic.map((h, i) => {
                   const max = Math.max(...dayDetail.hourlyTraffic.map(x => x.count), 1);
                   return (
                     <div key={i} className="flex items-center gap-2">
-                      <span className="text-[10px] text-gray-900/25 w-8 text-right font-mono">{h.hour}</span>
-                      <div className="flex-1 h-5 bg-white/[0.02] rounded overflow-hidden">
+                      <span className="text-[10px] text-[#86868B] w-8 text-right font-mono">{h.hour}</span>
+                      <div className="flex-1 h-5 bg-gray-100 rounded overflow-hidden">
                         <div
                           className="h-full bg-blue-500/50 rounded transition-all duration-500"
                           style={{ width: `${(h.count / max) * 100}%` }}
                         />
                       </div>
-                      <span className="text-[10px] text-gray-900/30 w-8 font-mono">{h.count}</span>
+                      <span className="text-[10px] text-[#636366] w-8 font-mono">{h.count}</span>
                     </div>
                   );
                 })}
@@ -310,12 +346,12 @@ export default function CalendarPage() {
 
             {/* Revenue Breakdown */}
             <div>
-              <h4 className="text-[13px] font-semibold text-gray-900 mb-3">Revenue Breakdown</h4>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">Revenue Breakdown</h4>
               <div className="space-y-2">
                 {dayDetail.revenueBreakdown.map((cat, i) => (
-                  <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                    <span className="text-[12px] text-gray-900/60">{cat.category}</span>
-                    <span className="text-[12px] text-gray-900/80 font-semibold">${cat.amount.toLocaleString()}</span>
+                  <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 border border-gray-200/50">
+                    <span className="text-xs text-[#636366]">{cat.category}</span>
+                    <span className="text-xs text-gray-900 font-semibold">${cat.amount.toLocaleString()}</span>
                   </div>
                 ))}
               </div>
@@ -323,57 +359,57 @@ export default function CalendarPage() {
 
             {/* YoY Comparison */}
             <div>
-              <h4 className="text-[13px] font-semibold text-gray-900 mb-3">Year over Year</h4>
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">Year over Year</h4>
               <div className="space-y-3">
                 {/* Traffic YoY */}
-                <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
-                  <p className="text-[11px] text-gray-900/30 mb-2">Traffic</p>
+                <div className="bg-gray-50 border border-gray-200/50 rounded-xl p-4">
+                  <p className="text-[11px] text-[#86868B] mb-2">Traffic</p>
                   <div className="flex gap-2 items-end">
                     <div className="flex-1">
-                      <div className="flex justify-between text-[10px] text-gray-900/40 mb-1">
+                      <div className="flex justify-between text-[10px] text-[#636366] mb-1">
                         <span>This Year</span>
                         <span>{dayDetail.yoyTraffic.current.toLocaleString()}</span>
                       </div>
-                      <div className="h-4 bg-white/[0.04] rounded-full overflow-hidden">
+                      <div className="h-4 bg-gray-200/50 rounded-full overflow-hidden">
                         <div className="h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${(dayDetail.yoyTraffic.current / Math.max(dayDetail.yoyTraffic.current, dayDetail.yoyTraffic.previous)) * 100}%` }} />
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-2 items-end mt-2">
                     <div className="flex-1">
-                      <div className="flex justify-between text-[10px] text-gray-900/40 mb-1">
+                      <div className="flex justify-between text-[10px] text-[#636366] mb-1">
                         <span>Last Year</span>
                         <span>{dayDetail.yoyTraffic.previous.toLocaleString()}</span>
                       </div>
-                      <div className="h-4 bg-white/[0.04] rounded-full overflow-hidden">
-                        <div className="h-full bg-white/20 rounded-full transition-all duration-500" style={{ width: `${(dayDetail.yoyTraffic.previous / Math.max(dayDetail.yoyTraffic.current, dayDetail.yoyTraffic.previous)) * 100}%` }} />
+                      <div className="h-4 bg-gray-200/50 rounded-full overflow-hidden">
+                        <div className="h-full bg-gray-400 rounded-full transition-all duration-500" style={{ width: `${(dayDetail.yoyTraffic.previous / Math.max(dayDetail.yoyTraffic.current, dayDetail.yoyTraffic.previous)) * 100}%` }} />
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Revenue YoY */}
-                <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
-                  <p className="text-[11px] text-gray-900/30 mb-2">Revenue</p>
+                <div className="bg-gray-50 border border-gray-200/50 rounded-xl p-4">
+                  <p className="text-[11px] text-[#86868B] mb-2">Revenue</p>
                   <div className="flex gap-2 items-end">
                     <div className="flex-1">
-                      <div className="flex justify-between text-[10px] text-gray-900/40 mb-1">
+                      <div className="flex justify-between text-[10px] text-[#636366] mb-1">
                         <span>This Year</span>
                         <span>${dayDetail.yoyRevenue.current.toLocaleString()}</span>
                       </div>
-                      <div className="h-4 bg-white/[0.04] rounded-full overflow-hidden">
+                      <div className="h-4 bg-gray-200/50 rounded-full overflow-hidden">
                         <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${(dayDetail.yoyRevenue.current / Math.max(dayDetail.yoyRevenue.current, dayDetail.yoyRevenue.previous)) * 100}%` }} />
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-2 items-end mt-2">
                     <div className="flex-1">
-                      <div className="flex justify-between text-[10px] text-gray-900/40 mb-1">
+                      <div className="flex justify-between text-[10px] text-[#636366] mb-1">
                         <span>Last Year</span>
                         <span>${dayDetail.yoyRevenue.previous.toLocaleString()}</span>
                       </div>
-                      <div className="h-4 bg-white/[0.04] rounded-full overflow-hidden">
-                        <div className="h-full bg-white/20 rounded-full transition-all duration-500" style={{ width: `${(dayDetail.yoyRevenue.previous / Math.max(dayDetail.yoyRevenue.current, dayDetail.yoyRevenue.previous)) * 100}%` }} />
+                      <div className="h-4 bg-gray-200/50 rounded-full overflow-hidden">
+                        <div className="h-full bg-gray-400 rounded-full transition-all duration-500" style={{ width: `${(dayDetail.yoyRevenue.previous / Math.max(dayDetail.yoyRevenue.current, dayDetail.yoyRevenue.previous)) * 100}%` }} />
                       </div>
                     </div>
                   </div>
@@ -384,11 +420,15 @@ export default function CalendarPage() {
             {/* AI Summary */}
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm">🧠</span>
-                <h4 className="text-[13px] font-semibold text-gray-900">AI Summary</h4>
+                <div className="w-6 h-6 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                  </svg>
+                </div>
+                <h4 className="text-sm font-semibold text-gray-900">AI Summary</h4>
               </div>
-              <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl p-4">
-                <p className="text-[12px] text-gray-900/50 leading-relaxed">{dayDetail.aiSummary}</p>
+              <div className="bg-gray-50 border border-gray-200/50 rounded-xl p-4">
+                <p className="text-xs text-[#636366] leading-relaxed">{dayDetail.aiSummary}</p>
               </div>
             </div>
           </div>

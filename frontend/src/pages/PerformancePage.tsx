@@ -30,10 +30,10 @@ interface PerformanceData {
 }
 
 const statusBadge: Record<string, { bg: string; text: string }> = {
-  pending: { bg: 'bg-yellow-500/20', text: 'text-yellow-600' },
-  approved: { bg: 'bg-green-500/20', text: 'text-green-600' },
-  sent: { bg: 'bg-blue-500/20', text: 'text-blue-600' },
-  rejected: { bg: 'bg-red-500/20', text: 'text-red-600' },
+  pending: { bg: 'bg-amber-500/15', text: 'text-amber-500' },
+  approved: { bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
+  sent: { bg: 'bg-blue-500/15', text: 'text-blue-500' },
+  rejected: { bg: 'bg-red-500/15', text: 'text-red-400' },
 };
 
 function ScoreRing({ score, size = 160 }: { score: number; size?: number }) {
@@ -51,8 +51,9 @@ function ScoreRing({ score, size = 160 }: { score: number; size?: number }) {
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="rgba(255,255,255,0.06)"
+          stroke="#e5e7eb"
           strokeWidth={strokeWidth}
+          opacity={0.3}
         />
         <circle
           cx={size / 2}
@@ -71,7 +72,7 @@ function ScoreRing({ score, size = 160 }: { score: number; size?: number }) {
         <span className="text-4xl font-bold tracking-tight" style={{ color }}>
           {score}
         </span>
-        <span className="text-xs text-gray-900/40 mt-0.5">Overall</span>
+        <span className="text-xs text-[#86868B] mt-0.5">Overall</span>
       </div>
     </div>
   );
@@ -84,7 +85,7 @@ function Sparkline({ bars }: { bars: number[] }) {
       {bars.map((v, i) => (
         <div
           key={i}
-          className="w-1.5 rounded-full bg-blue-400/60 transition-all duration-300"
+          className="w-1.5 rounded-full bg-violet-400/60 transition-all duration-300"
           style={{ height: `${(v / max) * 100}%`, minHeight: '2px' }}
         />
       ))}
@@ -93,10 +94,10 @@ function Sparkline({ bars }: { bars: number[] }) {
 }
 
 function TrendArrow({ value }: { value: number }) {
-  if (value === 0) return <span className="text-gray-900/30 text-xs">—</span>;
+  if (value === 0) return <span className="text-[#86868B] text-xs">—</span>;
   const isUp = value > 0;
   return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${isUp ? 'text-green-600' : 'text-red-600'}`}>
+    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${isUp ? 'text-emerald-500' : 'text-red-500'}`}>
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className={isUp ? '' : 'rotate-180'}>
         <path d="M5 2l3.5 5H1.5L5 2z" fill="currentColor" />
       </svg>
@@ -188,21 +189,24 @@ export default function PerformancePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] text-gray-900">
-      {/* Header */}
-      <div className="px-8 pt-8 pb-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Performance</h1>
+    <div className="min-h-screen p-6 lg:p-8 space-y-8">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Performance</h1>
+            <p className="text-base text-[#86868B] leading-relaxed">AI-powered performance insights for your team. Track individual metrics, weekly reviews, and gamification leaderboards.</p>
+          </div>
           {/* Auto-send toggle */}
-          <div className="flex items-center gap-2 bg-white/[0.05] rounded-xl p-1">
+          <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
             {(Object.keys(autoModeLabels) as Array<keyof typeof autoModeLabels>).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setAutoSendMode(mode)}
                 className={`px-4 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
                   autoSendMode === mode
-                    ? 'bg-blue-500 text-gray-900 shadow-sm'
-                    : 'text-gray-900/50 hover:text-gray-900/70'
+                    ? 'bg-blue-500 text-white shadow-sm shadow-blue-500/20'
+                    : 'text-[#86868B] hover:text-gray-900'
                 }`}
               >
                 {autoModeLabels[mode]}
@@ -212,65 +216,63 @@ export default function PerformancePage() {
         </div>
 
         {/* Clerk selector */}
-        <div className="relative inline-block">
+        <div className="relative inline-block mt-5">
           <select
             value={selectedClerkId}
             onChange={(e) => setSelectedClerkId(e.target.value)}
-            className="appearance-none bg-white/[0.05] border border-white/[0.1] rounded-xl px-4 py-2.5 pr-10 text-sm text-gray-900 focus:outline-none focus:border-blue-500/50 transition-all duration-200"
+            className="px-4 py-2.5 bg-white/80 border border-gray-200/50 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25 pr-10 appearance-none"
           >
             {clerks.map((c) => (
-              <option key={c.id} value={c.id} className="bg-white">
+              <option key={c.id} value={c.id}>
                 {c.fullName}
               </option>
             ))}
           </select>
-          <svg className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M3 4.5l3 3 3-3" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          <svg className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#86868B]" width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M3 4.5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-gray-200 border-t-violet-500 rounded-full animate-spin" />
         </div>
       ) : (
         <>
           {/* Score Ring + Metrics */}
-          <div className="px-8 pb-8">
-            <div className="flex flex-col lg:flex-row gap-8">
-              {/* Score Ring */}
-              <div className="flex-shrink-0 bg-white/[0.05] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-8 flex items-center justify-center">
-                <ScoreRing score={perfData?.overallScore ?? 0} />
-              </div>
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Score Ring */}
+            <div className="flex-shrink-0 bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-8 flex items-center justify-center">
+              <ScoreRing score={perfData?.overallScore ?? 0} />
+            </div>
 
-              {/* Metric Cards */}
-              <div className="flex-1 grid grid-cols-2 lg:grid-cols-3 gap-3">
-                {defaultMetrics.map((metric, i) => (
-                  <div
-                    key={i}
-                    className="bg-white/[0.05] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-4 hover:bg-white/[0.07] transition-all duration-200"
-                  >
-                    <p className="text-xs text-gray-900/40 font-medium uppercase tracking-wider mb-2">
-                      {metric.label}
-                    </p>
-                    <div className="flex items-end justify-between mb-3">
-                      <span className="text-2xl font-bold tracking-tight">{metric.value}</span>
-                      <TrendArrow value={metric.trend} />
-                    </div>
-                    {metric.bars.length > 0 && <Sparkline bars={metric.bars} />}
+            {/* Metric Cards */}
+            <div className="flex-1 grid grid-cols-2 lg:grid-cols-3 gap-3">
+              {defaultMetrics.map((metric, i) => (
+                <div
+                  key={i}
+                  className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-5 transition-all duration-200 hover:border-[#48484A]/60 hover:shadow-sm hover:shadow-black/10 group"
+                >
+                  <p className="text-[10px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">
+                    {metric.label}
+                  </p>
+                  <div className="flex items-end justify-between mb-3">
+                    <span className="text-2xl font-bold text-gray-900 tracking-tight">{metric.value}</span>
+                    <TrendArrow value={metric.trend} />
                   </div>
-                ))}
-              </div>
+                  {metric.bars.length > 0 && <Sparkline bars={metric.bars} />}
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Weekly Reviews */}
-          <div className="px-8 pb-8">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900/90">Weekly Reviews</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Weekly Reviews</h2>
             <div className="space-y-3">
               {reviews.length === 0 ? (
-                <div className="bg-white/[0.05] rounded-2xl p-8 text-center text-gray-900/30">
+                <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-8 text-center text-[#86868B]">
                   No reviews available
                 </div>
               ) : (
@@ -280,7 +282,7 @@ export default function PerformancePage() {
                   return (
                     <div
                       key={review.id}
-                      className="bg-white/[0.05] backdrop-blur-xl border border-white/[0.08] rounded-2xl overflow-hidden transition-all duration-200 hover:bg-white/[0.06]"
+                      className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl overflow-hidden transition-all duration-200 hover:border-[#48484A]/60 hover:shadow-sm hover:shadow-black/10"
                     >
                       {/* Review header */}
                       <button
@@ -288,16 +290,18 @@ export default function PerformancePage() {
                         className="w-full px-5 py-4 flex items-center justify-between text-left"
                       >
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center text-lg">
-                            📋
+                          <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-500">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                            </svg>
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900/90">Week of {review.weekOf}</p>
+                            <p className="text-sm font-semibold text-gray-900">Week of {review.weekOf}</p>
                             <div className="flex items-center gap-2 mt-0.5">
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
+                              <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${badge.bg} ${badge.text}`}>
                                 {review.status.charAt(0).toUpperCase() + review.status.slice(1)}
                               </span>
-                              <span className="text-xs text-gray-900/40">Score: {review.overallScore}</span>
+                              <span className="text-xs text-[#86868B]">Score: {review.overallScore}</span>
                             </div>
                           </div>
                         </div>
@@ -306,7 +310,7 @@ export default function PerformancePage() {
                           height="16"
                           viewBox="0 0 16 16"
                           fill="none"
-                          className={`text-gray-900/30 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                          className={`text-[#86868B] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                         >
                           <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
@@ -318,16 +322,16 @@ export default function PerformancePage() {
                           isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
                         }`}
                       >
-                        <div className="px-5 pb-5 space-y-4 border-t border-white/[0.06] pt-4">
+                        <div className="px-5 pb-5 space-y-4 border-t border-gray-100 pt-4">
                           {/* Scores */}
                           {review.scores && Object.keys(review.scores).length > 0 && (
                             <div>
-                              <p className="text-xs text-gray-900/40 font-medium uppercase tracking-wider mb-2">Scores</p>
+                              <p className="text-[10px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Scores</p>
                               <div className="grid grid-cols-2 gap-2">
                                 {Object.entries(review.scores).map(([key, val]) => (
-                                  <div key={key} className="flex items-center justify-between bg-white/[0.04] rounded-lg px-3 py-2">
-                                    <span className="text-sm text-gray-900/60 capitalize">{key.replace(/_/g, ' ')}</span>
-                                    <span className="text-sm font-semibold">{val}</span>
+                                  <div key={key} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
+                                    <span className="text-sm text-[#636366] capitalize">{key.replace(/_/g, ' ')}</span>
+                                    <span className="text-sm font-semibold text-gray-900">{val}</span>
                                   </div>
                                 ))}
                               </div>
@@ -337,11 +341,13 @@ export default function PerformancePage() {
                           {/* Highlights */}
                           {review.highlights && review.highlights.length > 0 && (
                             <div>
-                              <p className="text-xs text-gray-900/40 font-medium uppercase tracking-wider mb-2">Highlights</p>
+                              <p className="text-[10px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Highlights</p>
                               <ul className="space-y-1">
                                 {review.highlights.map((h, i) => (
-                                  <li key={i} className="text-sm text-green-600/80 flex items-start gap-2">
-                                    <span className="mt-0.5">✓</span>
+                                  <li key={i} className="text-sm text-emerald-600 flex items-start gap-2">
+                                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                    </svg>
                                     {h}
                                   </li>
                                 ))}
@@ -352,11 +358,13 @@ export default function PerformancePage() {
                           {/* Improvements */}
                           {review.improvements && review.improvements.length > 0 && (
                             <div>
-                              <p className="text-xs text-gray-900/40 font-medium uppercase tracking-wider mb-2">Areas for Improvement</p>
+                              <p className="text-[10px] font-semibold text-[#86868B] uppercase tracking-wider mb-2">Areas for Improvement</p>
                               <ul className="space-y-1">
                                 {review.improvements.map((imp, i) => (
-                                  <li key={i} className="text-sm text-yellow-600/80 flex items-start gap-2">
-                                    <span className="mt-0.5">→</span>
+                                  <li key={i} className="text-sm text-amber-600 flex items-start gap-2">
+                                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                                    </svg>
                                     {imp}
                                   </li>
                                 ))}
@@ -367,8 +375,8 @@ export default function PerformancePage() {
                           {/* AI Summary */}
                           {review.aiSummary && (
                             <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-                              <p className="text-xs text-blue-600 font-medium uppercase tracking-wider mb-1.5">AI Summary</p>
-                              <p className="text-sm text-gray-900/70 leading-relaxed">{review.aiSummary}</p>
+                              <p className="text-[10px] font-semibold text-blue-500 uppercase tracking-wider mb-1.5">AI Summary</p>
+                              <p className="text-sm text-[#636366] leading-relaxed">{review.aiSummary}</p>
                             </div>
                           )}
 
@@ -378,18 +386,18 @@ export default function PerformancePage() {
                               <button
                                 onClick={() => handleReviewAction(review.id, 'approve')}
                                 disabled={actionLoading === review.id}
-                                className="flex-1 py-2.5 rounded-xl bg-green-500/20 text-green-600 text-sm font-medium hover:bg-green-500/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
+                                className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-400 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
                               >
                                 Approve
                               </button>
                               <button
                                 onClick={() => handleReviewAction(review.id, 'reject')}
                                 disabled={actionLoading === review.id}
-                                className="flex-1 py-2.5 rounded-xl bg-red-500/20 text-red-600 text-sm font-medium hover:bg-red-500/30 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
+                                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-400 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
                               >
                                 Reject
                               </button>
-                              <button className="flex-1 py-2.5 rounded-xl bg-white/[0.05] text-gray-900/60 text-sm font-medium hover:bg-white/[0.08] transition-all duration-200 active:scale-[0.98]">
+                              <button className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition-all duration-200 active:scale-[0.98]">
                                 Edit
                               </button>
                             </div>

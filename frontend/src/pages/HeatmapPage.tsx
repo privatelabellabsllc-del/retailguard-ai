@@ -95,30 +95,43 @@ export default function HeatmapPage() {
   }, [fridges]);
 
   return (
-    <div className="min-h-screen p-6 lg:p-8 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Traffic Heatmap</h1>
-        <p className="text-sm text-[#86868B] mt-1">Visualize customer movement patterns across your store</p>
+    <div className="min-h-screen p-6 lg:p-8 space-y-8">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-br from-cyan-500/10 via-teal-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Traffic Heatmap</h1>
+            <p className="text-base text-[#86868B] leading-relaxed">Visual traffic heatmaps showing where customers spend the most time. Optimize store layout and product placement with AI insights.</p>
+          </div>
+          <button
+            onClick={refreshHeatmap}
+            className="px-6 py-3 text-sm font-semibold rounded-xl bg-blue-500 hover:bg-blue-400 text-white shadow-sm shadow-blue-500/20 transition-all duration-200 active:scale-95 flex items-center gap-2 shrink-0"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+            </svg>
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-xl px-4 py-2.5 flex items-center gap-2">
-          <svg className="w-4 h-4 text-[#636366]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          <svg className="w-4 h-4 text-[#636366]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
           </svg>
           <input
             type="date"
             value={selectedDate}
             onChange={e => setSelectedDate(e.target.value)}
-            className="bg-transparent text-sm text-gray-900 focus:outline-none [color-scheme:dark]"
+            className="bg-transparent text-sm text-gray-900 focus:outline-none"
           />
         </div>
 
         <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-xl px-4 py-2.5 flex items-center gap-3 flex-1 min-w-[200px] max-w-xs">
-          <svg className="w-4 h-4 text-[#636366] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg className="w-4 h-4 text-[#636366] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <input
             type="range"
@@ -136,7 +149,7 @@ export default function HeatmapPage() {
         <select
           value={selectedCamera}
           onChange={e => setSelectedCamera(e.target.value)}
-          className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-blue-500/50 [color-scheme:dark] appearance-none cursor-pointer"
+          className="px-4 py-2.5 bg-white/80 border border-gray-200/50 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25"
         >
           <option value="all">All Cameras</option>
           <option value="cam1">Camera 1 — Entrance</option>
@@ -149,7 +162,14 @@ export default function HeatmapPage() {
       {/* Heatmap Grid */}
       <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-gray-900">Store Floor Plan</h2>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+              <svg className="w-5 h-5 text-cyan-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900">Store Floor Plan</h2>
+          </div>
           <div className="flex items-center gap-2 text-[10px] text-[#86868B]">
             <span>Low</span>
             <div className="flex gap-0.5">
@@ -168,7 +188,7 @@ export default function HeatmapPage() {
                 className={`rounded-lg ${getCellColor(val)} transition-colors duration-300 hover:ring-1 hover:ring-white/20 cursor-crosshair relative group`}
                 title={`Row ${r + 1}, Col ${c + 1}: ${Math.round(val * 100)}% traffic`}
               >
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-black/80 text-[10px] text-gray-900 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap z-10">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-gray-900 text-[10px] text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap z-10">
                   {Math.round(val * 100)}%
                 </div>
               </div>
@@ -184,7 +204,7 @@ export default function HeatmapPage() {
           {zones.map(zone => (
             <div
               key={zone.id}
-              className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-5 transition-all duration-200 hover:border-[#48484A]/60 hover:shadow-sm hover:shadow-black/10"
+              className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-5 transition-all duration-200 hover:border-[#48484A]/60 hover:shadow-sm hover:shadow-black/10 group"
             >
               <h3 className="text-sm font-semibold text-gray-900 mb-3">{zone.name}</h3>
               <div className="space-y-2">
@@ -220,7 +240,7 @@ export default function HeatmapPage() {
                 }`}
               >
                 {isMostOpened && (
-                  <div className="absolute -top-2.5 right-4 px-2.5 py-0.5 bg-blue-500 text-[10px] font-semibold text-gray-900 rounded-full">
+                  <div className="absolute -top-2.5 right-4 px-2.5 py-0.5 bg-blue-500 text-[10px] font-semibold text-white rounded-full">
                     Most Opened
                   </div>
                 )}
@@ -242,7 +262,7 @@ export default function HeatmapPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-[#86868B]">Left-Open</span>
-                    <span className={`text-sm font-medium ${fridge.leftOpenAlerts > 0 ? 'text-amber-600' : 'text-[#636366]'}`}>
+                    <span className={`text-sm font-medium ${fridge.leftOpenAlerts > 0 ? 'text-amber-500' : 'text-[#636366]'}`}>
                       {fridge.leftOpenAlerts > 0 ? (
                         <span className="flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />

@@ -21,11 +21,11 @@ interface Projection {
 }
 
 const posProviders = [
-  { name: 'Square', icon: '⬛', connected: false, color: 'bg-gray-100' },
-  { name: 'Clover', icon: '🍀', connected: true, color: 'bg-green-50/40' },
-  { name: 'Shopify', icon: '🛍️', connected: false, color: 'bg-emerald-900/40' },
-  { name: 'Toast', icon: '🍞', connected: false, color: 'bg-orange-900/40' },
-  { name: 'Lightspeed', icon: '⚡', connected: false, color: 'bg-yellow-50/40' },
+  { name: 'Square', connected: false },
+  { name: 'Clover', connected: true },
+  { name: 'Shopify', connected: false },
+  { name: 'Toast', connected: false },
+  { name: 'Lightspeed', connected: false },
 ];
 
 export default function RevenuePage() {
@@ -101,33 +101,58 @@ export default function RevenuePage() {
   }
 
   return (
-    <div className="p-8 space-y-6 max-w-[1400px] mx-auto">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Revenue</h1>
-        <p className="text-sm text-gray-500 mt-1">Analytics, projections & integrations</p>
+    <div className="min-h-screen p-6 lg:p-8 space-y-8">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
+        <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Revenue</h1>
+        <p className="text-base text-[#86868B] leading-relaxed">Revenue analytics, projections, and POS integration. Track daily sales, identify trends, and forecast future performance.</p>
       </div>
 
       {/* Projections */}
       {projections && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { label: 'Daily Projected', value: projections.daily, period: 'Today' },
-            { label: 'Weekly Projected', value: projections.weekly, period: 'This week' },
-            { label: 'Monthly Projected', value: projections.monthly, period: 'This month' },
+            {
+              label: 'Daily Projected',
+              value: projections.daily,
+              period: 'Today',
+              iconBg: 'bg-emerald-500/10',
+              iconColor: 'text-emerald-600',
+            },
+            {
+              label: 'Weekly Projected',
+              value: projections.weekly,
+              period: 'This week',
+              iconBg: 'bg-blue-500/10',
+              iconColor: 'text-blue-600',
+            },
+            {
+              label: 'Monthly Projected',
+              value: projections.monthly,
+              period: 'This month',
+              iconBg: 'bg-purple-500/10',
+              iconColor: 'text-purple-600',
+            },
           ].map((p) => (
             <div
               key={p.label}
-              className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5 hover:border-white/10 transition-all duration-300"
+              className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-5 transition-all duration-200 hover:border-[#48484A]/60 hover:shadow-sm hover:shadow-black/10 group"
             >
-              <p className="text-xs text-gray-500 uppercase tracking-wider">{p.label}</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{formatCurrency(p.value)}</p>
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-10 h-10 rounded-xl ${p.iconBg} flex items-center justify-center ${p.iconColor}`}>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-xs text-[#86868B] uppercase tracking-wider">{p.label}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(p.value)}</p>
               <div className="flex items-center gap-2 mt-3">
-                <span className={`text-sm font-medium ${projections.trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {projections.trend >= 0 ? '↑' : '↓'} {Math.abs(projections.trend)}%
+                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${projections.trend >= 0 ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'}`}>
+                  {projections.trend >= 0 ? '+' : ''}{projections.trend}%
                 </span>
-                <span className="text-xs text-gray-500">{p.period}</span>
-                <span className="ml-auto px-2 py-0.5 text-xs rounded-full bg-blue-500/20 text-blue-600 font-medium">
+                <span className="text-xs text-[#86868B]">{p.period}</span>
+                <span className="ml-auto text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-500">
                   {projections.confidence}% conf
                 </span>
               </div>
@@ -137,26 +162,41 @@ export default function RevenuePage() {
       )}
 
       {/* Tab Switcher */}
-      <div className="flex gap-1 bg-white/60 backdrop-blur-xl rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-xl p-1 w-fit">
         {(['chart', 'pos', 'manual'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               activeTab === tab
                 ? 'bg-gray-100 text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-600'
+                : 'text-[#86868B] hover:text-gray-700'
             }`}
           >
-            {tab === 'chart' ? '📊 Revenue Chart' : tab === 'pos' ? '🔗 POS Integration' : '✏️ Manual Entry'}
+            {tab === 'chart' && (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+              </svg>
+            )}
+            {tab === 'pos' && (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.813a4.5 4.5 0 00-6.364-6.364L4.5 8.25" />
+              </svg>
+            )}
+            {tab === 'manual' && (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+              </svg>
+            )}
+            {tab === 'chart' ? 'Revenue Chart' : tab === 'pos' ? 'POS Integration' : 'Manual Entry'}
           </button>
         ))}
       </div>
 
       {/* Chart */}
       {activeTab === 'chart' && (
-        <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">Last 30 Days Revenue</h3>
+        <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-6">Last 30 Days Revenue</h2>
           <div className="flex items-end gap-[3px] h-48">
             {chartData.map((d, i) => {
               const height = (d.amount / maxAmount) * 100;
@@ -167,17 +207,17 @@ export default function RevenuePage() {
                     className="w-full rounded-t-sm transition-all duration-300 group-hover:opacity-80 cursor-pointer"
                     style={{
                       height: `${height}%`,
-                      background: `linear-gradient(to top, rgba(59,130,246,${0.3 + intensity * 0.7}), rgba(99,102,241,${0.3 + intensity * 0.7}))`,
+                      background: `linear-gradient(to top, rgba(16,185,129,${0.3 + intensity * 0.7}), rgba(20,184,166,${0.3 + intensity * 0.7}))`,
                     }}
                   />
-                  <div className="absolute -top-10 bg-gray-100 text-gray-900 text-xs px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-10 shadow-sm">
+                  <div className="absolute -top-10 bg-white border border-gray-200/50 text-gray-900 text-xs px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-10 shadow-sm">
                     {d.date}: {formatCurrency(d.amount)}
                   </div>
                 </div>
               );
             })}
           </div>
-          <div className="flex justify-between mt-3 text-[10px] text-gray-500">
+          <div className="flex justify-between mt-3 text-[10px] text-[#86868B]">
             <span>{chartData[0]?.date}</span>
             <span>{chartData[Math.floor(chartData.length / 2)]?.date}</span>
             <span>{chartData[chartData.length - 1]?.date}</span>
@@ -191,27 +231,31 @@ export default function RevenuePage() {
           {posProviders.map((pos) => (
             <div
               key={pos.name}
-              className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-white/5 hover:border-white/10 transition-all duration-300"
+              className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-5 transition-all duration-200 hover:border-[#48484A]/60 hover:shadow-sm hover:shadow-black/10 group"
             >
               <div className="flex items-center gap-3 mb-4">
-                <span className="text-2xl">{pos.icon}</span>
+                <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-[#636366]">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+                  </svg>
+                </div>
                 <div>
-                  <p className="text-gray-900 font-semibold">{pos.name}</p>
-                  <p className="text-xs text-gray-500">Point of Sale</p>
+                  <p className="text-sm font-semibold text-gray-900">{pos.name}</p>
+                  <p className="text-xs text-[#86868B]">Point of Sale</p>
                 </div>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${pos.connected ? 'bg-green-400' : 'bg-gray-500'}`} />
-                  <span className={`text-xs ${pos.connected ? 'text-green-600' : 'text-gray-500'}`}>
+                  <span className={`w-2 h-2 rounded-full ${pos.connected ? 'bg-emerald-400' : 'bg-gray-300'}`} />
+                  <span className={`text-xs ${pos.connected ? 'text-emerald-500' : 'text-[#86868B]'}`}>
                     {pos.connected ? 'Connected' : 'Not connected'}
                   </span>
                 </div>
                 <button
-                  className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                  className={`px-4 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 ${
                     pos.connected
-                      ? 'bg-red-500/10 text-red-600 hover:bg-red-500/20'
-                      : 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/20'
+                      ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25'
+                      : 'bg-blue-500/15 text-blue-500 hover:bg-blue-500/25'
                   }`}
                 >
                   {pos.connected ? 'Disconnect' : 'Connect'}
@@ -224,8 +268,8 @@ export default function RevenuePage() {
 
       {/* Manual Entry */}
       {activeTab === 'manual' && (
-        <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 border border-white/5">
-          <h3 className="text-lg font-semibold text-gray-900 mb-5">Add Revenue Entry</h3>
+        <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-5">Add Revenue Entry</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {[
               { key: 'date', label: 'Date', type: 'date', placeholder: '' },
@@ -235,20 +279,20 @@ export default function RevenuePage() {
               { key: 'card', label: 'Card Amount', type: 'number', placeholder: '$0.00' },
             ].map((field) => (
               <div key={field.key}>
-                <label className="block text-xs text-gray-500 mb-1.5">{field.label}</label>
+                <label className="block text-xs text-[#86868B] mb-1.5">{field.label}</label>
                 <input
                   type={field.type}
                   placeholder={field.placeholder}
                   value={form[field.key as keyof typeof form]}
                   onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-                  className="w-full bg-[#F5F5F7] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 transition-all duration-200"
+                  className="w-full px-4 py-2.5 bg-white/80 border border-gray-200/50 rounded-xl text-sm text-gray-900 placeholder:text-[#636366] focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25 transition-all duration-200"
                 />
               </div>
             ))}
             <div className="sm:col-span-2 lg:col-span-5 flex justify-end">
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-blue-500 hover:bg-blue-600 text-gray-900 text-sm font-medium rounded-xl transition-all duration-200 active:scale-95"
+                className="px-6 py-3 text-sm font-semibold rounded-xl bg-blue-500 hover:bg-blue-400 text-white shadow-sm shadow-blue-500/20 transition-all duration-200 active:scale-95"
               >
                 Add Entry
               </button>
@@ -258,40 +302,40 @@ export default function RevenuePage() {
       )}
 
       {/* Revenue Records Table */}
-      <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/5 overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/5">
-          <h3 className="text-lg font-semibold text-gray-900">Revenue Records</h3>
+      <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-900">Revenue Records</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-xs text-gray-500 uppercase tracking-wider">
-                <th className="text-left px-6 py-3 font-medium">Date</th>
-                <th className="text-right px-6 py-3 font-medium">Total</th>
-                <th className="text-right px-6 py-3 font-medium">Transactions</th>
-                <th className="text-right px-6 py-3 font-medium">Avg</th>
-                <th className="text-right px-6 py-3 font-medium">Cash</th>
-                <th className="text-right px-6 py-3 font-medium">Card</th>
-                <th className="text-center px-6 py-3 font-medium">Source</th>
+              <tr className="border-b border-gray-100">
+                <th className="px-5 py-3 text-left text-[10px] font-semibold text-[#86868B] uppercase tracking-wider">Date</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold text-[#86868B] uppercase tracking-wider">Total</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold text-[#86868B] uppercase tracking-wider">Transactions</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold text-[#86868B] uppercase tracking-wider">Avg</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold text-[#86868B] uppercase tracking-wider">Cash</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold text-[#86868B] uppercase tracking-wider">Card</th>
+                <th className="px-5 py-3 text-center text-[10px] font-semibold text-[#86868B] uppercase tracking-wider">Source</th>
               </tr>
             </thead>
             <tbody>
               {records.map((r) => (
                 <tr
                   key={r.id}
-                  className="border-t border-white/5 hover:bg-white/[0.02] transition-colors duration-150"
+                  className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
                 >
-                  <td className="px-6 py-3.5 text-sm text-gray-900">{r.date}</td>
-                  <td className="px-6 py-3.5 text-sm text-gray-900 text-right font-medium">{formatCurrency(r.total)}</td>
-                  <td className="px-6 py-3.5 text-sm text-gray-600 text-right">{r.transactions}</td>
-                  <td className="px-6 py-3.5 text-sm text-gray-600 text-right">${r.average.toFixed(2)}</td>
-                  <td className="px-6 py-3.5 text-sm text-green-600 text-right">{formatCurrency(r.cash)}</td>
-                  <td className="px-6 py-3.5 text-sm text-blue-600 text-right">{formatCurrency(r.card)}</td>
-                  <td className="px-6 py-3.5 text-center">
-                    <span className={`px-2.5 py-0.5 text-xs rounded-full font-medium ${
+                  <td className="px-5 py-4 text-sm text-gray-900">{r.date}</td>
+                  <td className="px-5 py-4 text-sm text-gray-900 text-right font-medium">{formatCurrency(r.total)}</td>
+                  <td className="px-5 py-4 text-sm text-[#636366] text-right">{r.transactions}</td>
+                  <td className="px-5 py-4 text-sm text-[#636366] text-right">${r.average.toFixed(2)}</td>
+                  <td className="px-5 py-4 text-sm text-emerald-500 text-right">{formatCurrency(r.cash)}</td>
+                  <td className="px-5 py-4 text-sm text-blue-500 text-right">{formatCurrency(r.card)}</td>
+                  <td className="px-5 py-4 text-center">
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
                       r.source === 'POS'
-                        ? 'bg-purple-500/15 text-purple-600'
-                        : 'bg-gray-500/15 text-gray-500'
+                        ? 'bg-blue-500/15 text-blue-500'
+                        : 'bg-gray-100 text-[#86868B]'
                     }`}>
                       {r.source}
                     </span>
