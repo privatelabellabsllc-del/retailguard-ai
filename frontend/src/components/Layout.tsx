@@ -24,7 +24,7 @@ const navSections: NavSection[] = [
   {
     title: 'SECURITY',
     items: [
-      { label: 'Dashboard', path: '/', icon: '🏠' },
+      { label: 'Dashboard', path: '/dashboard', icon: '🏠' },
       { label: 'Review Queue', path: '/incidents', icon: '🔍', featureKey: 'incidents' },
       { label: 'Alerts', path: '/alerts', icon: '🔔', featureKey: 'alerts' },
       { label: 'Offenders', path: '/persons', icon: '👤', featureKey: 'persons' },

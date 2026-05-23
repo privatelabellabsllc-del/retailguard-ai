@@ -20,6 +20,7 @@ const ScannerPage = React.lazy(() => import('./pages/ScannerPage'));
 const RevenuePage = React.lazy(() => import('./pages/RevenuePage'));
 const CamerasPage = React.lazy(() => import('./pages/CamerasPage'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
+const PersonDetailPage = React.lazy(() => import('./pages/PersonDetailPage'));
 
 // Auth guard component
 const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -59,8 +60,11 @@ const App: React.FC = () => {
             }
           >
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/incidents" element={<ReviewQueuePage />} />
             <Route path="/review" element={<ReviewQueuePage />} />
             <Route path="/alerts" element={<AlertsPage />} />
+            <Route path="/persons" element={<OffendersPage />} />
+            <Route path="/persons/:id" element={<PersonDetailPage />} />
             <Route path="/offenders" element={<OffendersPage />} />
             <Route path="/blacklist" element={<BlacklistPage />} />
             <Route path="/traffic" element={<TrafficPage />} />
