@@ -23,6 +23,7 @@ from app.models.permissions import FeaturePermission, RoleTemplate  # noqa
 # Now import API routers (no name shadowing)
 from app.api import auth, incidents, alerts, persons, cameras
 from app.api import traffic, team, cash, shelves, analytics, permissions
+from app.api import stream, clips
 
 app = FastAPI(
     title="RetailGuard AI",
@@ -54,6 +55,10 @@ app.include_router(cash.router)
 app.include_router(shelves.router)
 app.include_router(analytics.router)
 app.include_router(permissions.router)
+
+# AI Pipeline & Clips routes
+app.include_router(stream.router)
+app.include_router(clips.router)
 
 
 @app.on_event("startup")
@@ -101,6 +106,18 @@ def startup():
         db.close()
     except Exception as e:
         print(f"Admin seed error: {e}")
+
+    # Initialize AI Stream Manager
+    import asyncio
+    try:
+        from app.services.stream_manager import StreamManager
+        manager = StreamManager.get_instance()
+        # Schedule initialization (can't await in sync startup)
+        loop = asyncio.get_event_loop()
+        loop.create_task(manager.initialize())
+        print("AI StreamManager initialization scheduled")
+    except Exception as e:
+        print(f"StreamManager init error (non-fatal): {e}")
 
 
 @app.get("/")
