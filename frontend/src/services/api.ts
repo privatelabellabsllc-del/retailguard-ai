@@ -172,12 +172,37 @@ export const persons = {
     const { data } = await api.patch(`/api/persons/${id}`, payload);
     return data;
   },
+  create: async (payload: any) => {
+    const { data } = await api.post('/api/persons', payload);
+    return data;
+  },
   blacklistPerson: async (id: string, blacklisted: boolean, reason?: string) => {
     const { data } = await api.post(`/api/persons/${id}/blacklist`, { blacklisted, reason });
     return data;
   },
   sightings: async (id: string) => {
     const { data } = await api.get(`/api/persons/${id}/sightings`);
+    return data;
+  },
+  uploadIdPhoto: async (id: string, file: File, idType: string = 'drivers_license') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('id_type', idType);
+    const { data } = await api.post(`/api/persons/${id}/id-photo`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+  uploadPortrait: async (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await api.post(`/api/persons/${id}/portrait`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+  delete: async (id: string) => {
+    const { data } = await api.delete(`/api/persons/${id}`);
     return data;
   },
 };

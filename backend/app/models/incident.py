@@ -31,6 +31,15 @@ class IncidentSeverity(str, enum.Enum):
     CRITICAL = "critical"  # Known offender + active theft
 
 
+class TheftClassification(str, enum.Enum):
+    LIKELY_PAID = "likely_paid"
+    LIKELY_THEFT = "likely_theft"
+    PARTIAL_THEFT = "partial_theft"
+    UNDER_REVIEW = "under_review"
+    CLEARED = "cleared"
+    GRAB_AND_RUN = "grab_and_run"
+
+
 class ReviewStatus(str, enum.Enum):
     PENDING = "pending"        # Waiting for clerk review
     CONFIRMED_THEFT = "theft"  # Clerk confirmed theft
@@ -61,6 +70,16 @@ class Incident(Base):
     
     # When
     detected_at = Column(DateTime, nullable=False, index=True)
+    
+    # Theft Classification (from zone tracker journey analysis)
+    theft_classification = Column(
+        SAEnum(TheftClassification), default=TheftClassification.UNDER_REVIEW
+    )
+    classification_confidence = Column(Float, nullable=True)
+    classification_reason = Column(Text, nullable=True)
+    visited_register = Column(Boolean, default=False)
+    register_dwell_seconds = Column(Float, nullable=True)
+    concealment_count = Column(Integer, default=1)
     
     # AI Detection Details
     ai_confidence = Column(Float, nullable=False)  # 0-1

@@ -19,7 +19,20 @@ interface Incident {
   estimated_value?: number;
   clips?: string[];
   detection_details?: any;
+  theft_classification?: string;
+  classification_reason?: string;
+  visited_register?: boolean;
+  concealment_count?: number;
 }
+
+const classificationBadge: Record<string, { label: string; color: string; bg: string }> = {
+  likely_theft: { label: 'LIKELY THEFT', color: 'text-red-600', bg: 'bg-red-500/15' },
+  grab_and_run: { label: 'GRAB & RUN', color: 'text-red-700', bg: 'bg-red-600/20' },
+  partial_theft: { label: 'PARTIAL THEFT', color: 'text-orange-600', bg: 'bg-orange-500/15' },
+  likely_paid: { label: 'LIKELY PAID', color: 'text-emerald-600', bg: 'bg-emerald-500/15' },
+  under_review: { label: 'UNDER REVIEW', color: 'text-blue-600', bg: 'bg-blue-500/15' },
+  cleared: { label: 'CLEARED', color: 'text-gray-500', bg: 'bg-gray-500/15' },
+};
 
 type FilterTab = 'all' | 'pending_review' | 'confirmed_theft' | 'not_theft' | 'unsure';
 

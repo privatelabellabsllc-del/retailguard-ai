@@ -43,27 +43,41 @@ export interface RegisterPayload {
 export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical';
 export type IncidentStatus = 'new' | 'reviewing' | 'confirmed' | 'resolved' | 'dismissed';
 
+export type TheftClassification = 
+  | 'likely_paid' 
+  | 'likely_theft' 
+  | 'partial_theft' 
+  | 'under_review' 
+  | 'cleared' 
+  | 'grab_and_run';
+
 export interface Incident {
   id: string;
-  title: string;
-  description: string;
-  severity: IncidentSeverity;
-  status: IncidentStatus;
-  camera_id: string;
-  camera_name?: string;
-  location_id?: string;
-  location_name?: string;
+  created_at: string;
   person_id?: string;
-  person_name?: string;
-  thumbnail_url?: string;
-  video_url?: string;
+  person_display_name?: string;
+  person_status?: string;
+  incident_type: string;
+  severity: string;
+  review_status: string;
+  camera_id?: string;
+  zone_name?: string;
+  ai_confidence: number;
+  ai_description?: string;
   detected_at: string;
+  estimated_item?: string;
+  estimated_value?: number;
+  theft_classification?: TheftClassification;
+  classification_confidence?: number;
+  classification_reason?: string;
+  visited_register: boolean;
+  register_dwell_seconds?: number;
+  concealment_count: number;
+  clips: { id: string; clip_url: string; thumbnail_path?: string; duration_seconds: number; key_moment_offset?: number }[];
+  detection_details?: Record<string, unknown>;
   reviewed_at?: string;
   reviewed_by?: string;
-  tags: string[];
-  metadata?: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
+  review_notes?: string;
 }
 
 // ─── Alerts ──────────────────────────────────
@@ -92,15 +106,36 @@ export type PersonCategory = 'known' | 'unknown' | 'employee' | 'blacklisted' | 
 export interface Person {
   id: string;
   name?: string;
+  display_name?: string;
   category: PersonCategory;
+  status?: string;
+  threat_level?: number;
   face_encoding?: string;
   thumbnail_url?: string;
+  best_portrait_path?: string;
   first_seen: string;
   last_seen: string;
   visit_count: number;
+  total_visits?: number;
+  total_incidents?: number;
+  total_confirmed_thefts?: number;
   notes?: string;
   tags: string[];
   metadata?: Record<string, unknown>;
+  // Physical description
+  estimated_age_range?: string;
+  estimated_gender?: string;
+  estimated_height_cm?: number;
+  estimated_build?: string;
+  hair_description?: string;
+  // Manual entry fields
+  full_name?: string;
+  date_of_birth?: string;
+  address?: string;
+  phone_number?: string;
+  drivers_license?: string;
+  id_photo_path?: string;
+  id_type?: string;
   created_at: string;
   updated_at: string;
 }

@@ -1,5 +1,7 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text, inspect
 from app.config import settings
 from app.database import engine, Base
@@ -59,6 +61,10 @@ app.include_router(permissions.router)
 # AI Pipeline & Clips routes
 app.include_router(stream.router)
 app.include_router(clips.router)
+
+# Serve uploaded files (ID photos, portraits, etc.)
+os.makedirs("/app/uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="/app/uploads"), name="uploads")
 
 
 @app.on_event("startup")
@@ -169,7 +175,7 @@ def reset_and_seed():
 
         # --- Seed one person (known visitor) ---
         from app.models.person import PersonStatus
-        from app.models.incident import IncidentType, IncidentSeverity, ReviewStatus
+        from app.models.incident import IncidentType, IncidentSeverity, ReviewStatus, TheftClassification
         from app.models.alert import AlertType, AlertPriority, AlertStatus
 
         person = Person(
@@ -205,6 +211,11 @@ def reset_and_seed():
             detected_at=datetime.utcnow() - timedelta(hours=1),
             estimated_item="Wireless Earbuds",
             estimated_value=49.99,
+            theft_classification=TheftClassification.LIKELY_THEFT,
+            classification_confidence=0.82,
+            classification_reason="Concealed 1 item, bypassed register, exited store within 45 seconds.",
+            visited_register=False,
+            concealment_count=1,
         )
         db.add(incident)
         db.flush()

@@ -55,6 +55,15 @@ class Person(Base):
     gait_embedding = Column(LargeBinary, nullable=True)
     gait_confidence = Column(Float, nullable=True)
     
+    # Manually entered personal info (from clerk / ID scan)
+    full_name = Column(String(255), nullable=True)
+    date_of_birth = Column(String(20), nullable=True)  # "MM/DD/YYYY"
+    address = Column(Text, nullable=True)
+    phone_number = Column(String(30), nullable=True)
+    drivers_license = Column(String(50), nullable=True)
+    id_photo_path = Column(String(500), nullable=True)  # Photo of their ID
+    id_type = Column(String(50), nullable=True)  # "drivers_license", "state_id", "passport"
+    
     # Best portrait image path
     best_portrait_path = Column(String(500), nullable=True)
     

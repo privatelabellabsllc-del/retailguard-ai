@@ -1,13 +1,16 @@
 """
 Persons API — manage tracked individuals, offenders, blacklist.
+Supports manual entry of personal info and ID photo upload.
 """
+import os
+import uuid
+import shutil
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from pydantic import BaseModel
 from typing import Optional, List
-import uuid
 
 from app.database import get_db
 from app.models.person import Person, PersonStatus, PersonSighting
@@ -15,6 +18,9 @@ from app.api.auth import get_current_user
 from app.models.user import User
 
 router = APIRouter(prefix="/api/persons", tags=["persons"])
+
+UPLOAD_DIR = "/app/uploads/id_photos"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 class PersonResponse(BaseModel):
@@ -34,6 +40,14 @@ class PersonResponse(BaseModel):
     total_confirmed_thefts: int
     first_seen: Optional[datetime]
     last_seen: Optional[datetime]
+    # Manual info fields
+    full_name: Optional[str]
+    date_of_birth: Optional[str]
+    address: Optional[str]
+    phone_number: Optional[str]
+    drivers_license: Optional[str]
+    id_photo_path: Optional[str]
+    id_type: Optional[str]
     
     class Config:
         from_attributes = True
@@ -43,6 +57,35 @@ class PersonUpdate(BaseModel):
     display_name: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[str] = None
+    full_name: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    address: Optional[str] = None
+    phone_number: Optional[str] = None
+    drivers_license: Optional[str] = None
+    id_type: Optional[str] = None
+    estimated_age_range: Optional[str] = None
+    estimated_gender: Optional[str] = None
+    estimated_height_cm: Optional[float] = None
+    estimated_build: Optional[str] = None
+    hair_description: Optional[str] = None
+
+
+class PersonCreate(BaseModel):
+    display_name: Optional[str] = None
+    full_name: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    address: Optional[str] = None
+    phone_number: Optional[str] = None
+    drivers_license: Optional[str] = None
+    id_type: Optional[str] = None
+    status: Optional[str] = "known"
+    threat_level: Optional[int] = 0
+    notes: Optional[str] = None
+    estimated_age_range: Optional[str] = None
+    estimated_gender: Optional[str] = None
+    estimated_height_cm: Optional[float] = None
+    estimated_build: Optional[str] = None
+    hair_description: Optional[str] = None
 
 
 @router.get("/", response_model=List[PersonResponse])
@@ -60,7 +103,11 @@ async def list_persons(
     if status:
         query = query.filter(Person.status == status)
     if search:
-        query = query.filter(Person.display_name.ilike(f"%{search}%"))
+        query = query.filter(
+            (Person.display_name.ilike(f"%{search}%")) |
+            (Person.full_name.ilike(f"%{search}%")) |
+            (Person.drivers_license.ilike(f"%{search}%"))
+        )
     
     persons = query.order_by(desc(Person.last_seen)).offset(offset).limit(limit).all()
     return [_format_person(p) for p in persons]
@@ -90,6 +137,36 @@ async def get_blacklist(
     return [_format_person(p) for p in persons]
 
 
+@router.post("/", response_model=PersonResponse)
+async def create_person(
+    person_data: PersonCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Manually create a person record — for when clerk enters info from an ID."""
+    person = Person(
+        display_name=person_data.display_name or person_data.full_name or "Unknown",
+        full_name=person_data.full_name,
+        date_of_birth=person_data.date_of_birth,
+        address=person_data.address,
+        phone_number=person_data.phone_number,
+        drivers_license=person_data.drivers_license,
+        id_type=person_data.id_type,
+        status=PersonStatus(person_data.status) if person_data.status else PersonStatus.KNOWN,
+        threat_level=person_data.threat_level or 0,
+        notes=person_data.notes,
+        estimated_age_range=person_data.estimated_age_range,
+        estimated_gender=person_data.estimated_gender,
+        estimated_height_cm=person_data.estimated_height_cm,
+        estimated_build=person_data.estimated_build,
+        hair_description=person_data.hair_description,
+    )
+    db.add(person)
+    db.commit()
+    db.refresh(person)
+    return _format_person(person)
+
+
 @router.get("/{person_id}", response_model=PersonResponse)
 async def get_person(
     person_id: str,
@@ -109,27 +186,94 @@ async def update_person(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update person details — name, notes, status."""
+    """Update person details — name, notes, status, personal info."""
     person = db.query(Person).filter(Person.id == uuid.UUID(person_id)).first()
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
     
-    if update.display_name is not None:
-        person.display_name = update.display_name
-    if update.notes is not None:
-        person.notes = update.notes
-    if update.status is not None:
-        try:
-            person.status = PersonStatus(update.status)
-            if update.status == "blacklisted":
-                person.threat_level = 4
-        except ValueError:
-            raise HTTPException(status_code=400, detail=f"Invalid status: {update.status}")
+    update_data = update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        if field == "status":
+            try:
+                person.status = PersonStatus(value)
+                if value == "blacklisted":
+                    person.threat_level = 4
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid status: {value}")
+        else:
+            setattr(person, field, value)
     
     person.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(person)
     return _format_person(person)
+
+
+@router.post("/{person_id}/id-photo")
+async def upload_id_photo(
+    person_id: str,
+    file: UploadFile = File(...),
+    id_type: str = Form(default="drivers_license"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Upload a photo of the person's ID (driver's license, state ID, etc.)."""
+    person = db.query(Person).filter(Person.id == uuid.UUID(person_id)).first()
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+    
+    # Save file
+    ext = file.filename.split(".")[-1] if file.filename else "jpg"
+    filename = f"{person_id}_id.{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    
+    with open(filepath, "wb") as f:
+        content = await file.read()
+        f.write(content)
+    
+    person.id_photo_path = f"/uploads/id_photos/{filename}"
+    person.id_type = id_type
+    person.updated_at = datetime.utcnow()
+    db.commit()
+    
+    return {
+        "message": "ID photo uploaded",
+        "id_photo_path": person.id_photo_path,
+        "id_type": id_type,
+    }
+
+
+@router.post("/{person_id}/portrait")
+async def upload_portrait(
+    person_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Upload a portrait photo for a person."""
+    person = db.query(Person).filter(Person.id == uuid.UUID(person_id)).first()
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+    
+    portrait_dir = "/app/uploads/portraits"
+    os.makedirs(portrait_dir, exist_ok=True)
+    
+    ext = file.filename.split(".")[-1] if file.filename else "jpg"
+    filename = f"{person_id}_portrait.{ext}"
+    filepath = os.path.join(portrait_dir, filename)
+    
+    with open(filepath, "wb") as f:
+        content = await file.read()
+        f.write(content)
+    
+    person.best_portrait_path = f"/uploads/portraits/{filename}"
+    person.updated_at = datetime.utcnow()
+    db.commit()
+    
+    return {
+        "message": "Portrait uploaded",
+        "portrait_path": person.best_portrait_path,
+    }
 
 
 @router.post("/{person_id}/blacklist")
@@ -177,6 +321,21 @@ async def get_sightings(
     } for s in sightings]
 
 
+@router.delete("/{person_id}")
+async def delete_person(
+    person_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a person record."""
+    person = db.query(Person).filter(Person.id == uuid.UUID(person_id)).first()
+    if not person:
+        raise HTTPException(status_code=404, detail="Person not found")
+    db.delete(person)
+    db.commit()
+    return {"message": "Person deleted", "person_id": person_id}
+
+
 def _format_person(p: Person) -> PersonResponse:
     return PersonResponse(
         id=str(p.id),
@@ -195,4 +354,11 @@ def _format_person(p: Person) -> PersonResponse:
         total_confirmed_thefts=p.total_confirmed_thefts,
         first_seen=p.first_seen,
         last_seen=p.last_seen,
+        full_name=p.full_name,
+        date_of_birth=p.date_of_birth,
+        address=p.address,
+        phone_number=p.phone_number,
+        drivers_license=p.drivers_license,
+        id_photo_path=p.id_photo_path,
+        id_type=p.id_type,
     )

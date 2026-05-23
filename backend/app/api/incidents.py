@@ -10,7 +10,7 @@ from typing import Optional, List
 import uuid
 
 from app.database import get_db
-from app.models.incident import Incident, IncidentClip, IncidentReview, ReviewStatus, IncidentType
+from app.models.incident import Incident, IncidentClip, IncidentReview, ReviewStatus, IncidentType, TheftClassification
 from app.models.person import Person, PersonStatus
 from app.models.alert import Alert, AlertType, AlertPriority
 from app.api.auth import get_current_user
@@ -37,6 +37,12 @@ class IncidentResponse(BaseModel):
     detected_at: datetime
     estimated_item: Optional[str]
     estimated_value: Optional[float]
+    theft_classification: Optional[str] = None
+    classification_confidence: Optional[float] = None
+    classification_reason: Optional[str] = None
+    visited_register: bool = False
+    register_dwell_seconds: Optional[float] = None
+    concealment_count: int = 1
     clips: List[dict] = []
     detection_details: Optional[dict] = None
     

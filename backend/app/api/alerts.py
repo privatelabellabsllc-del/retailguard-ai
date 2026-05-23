@@ -214,6 +214,16 @@ async def take_action(
         response_data["evidence_package"] = evidence_path
         response_data["show_911_prompt"] = True
     
+    elif clerk_action == ClerkAction.PAID:
+        # Customer agreed to pay for stolen items
+        if alert.person:
+            notes = alert.person.notes or ""
+            alert.person.notes = f"{notes}\n[{datetime.utcnow().isoformat()}] PAID for stolen items — resolved by {current_user.full_name or current_user.username}"
+            # Reduce threat level but keep record
+            if alert.person.threat_level > 1:
+                alert.person.threat_level -= 1
+            response_data["paid"] = True
+    
     elif clerk_action == ClerkAction.BLACKLIST:
         # Update person status to blacklisted
         if alert.person:

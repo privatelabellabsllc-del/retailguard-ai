@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from app.ai.face_engine import FaceEngine, FaceDetection
 from app.ai.concealment_detector import ConcealmentDetector, ConcealmentEvent
 from app.ai.identity_matcher import IdentityMatcher, IdentityMatch
+from app.ai.zone_tracker import ZoneTracker, ZoneDefinition, TheftClassification, PersonJourney
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -69,24 +70,33 @@ class DetectionPipeline:
         face_engine: FaceEngine,
         concealment_detector: ConcealmentDetector,
         identity_matcher: IdentityMatcher,
+        zone_tracker: Optional[ZoneTracker] = None,
         on_alert_callback=None,       # Called when known offender detected
         on_incident_callback=None,    # Called when concealment detected
         on_clip_ready_callback=None,  # Called when evidence clip is ready
+        on_theft_classified_callback=None,  # Called when theft/paid is determined
     ):
         self.camera_id = camera_id
         self.face_engine = face_engine
         self.concealment_detector = concealment_detector
         self.identity_matcher = identity_matcher
+        self.zone_tracker = zone_tracker or ZoneTracker()
         
         self.on_alert = on_alert_callback
         self.on_incident = on_incident_callback
         self.on_clip_ready = on_clip_ready_callback
+        self.on_theft_classified = on_theft_classified_callback
+        
+        # Wire up zone tracker callback
+        self.zone_tracker.on_theft_classified = self._on_journey_classified
         
         # Tracking state
         self.tracked_persons: Dict[str, TrackedPerson] = {}
         self.active_clips: Dict[str, ClipCapture] = {}
         self.frame_count = 0
         self.fps = 0
+        self.frame_width = 0
+        self.frame_height = 0
         
         # Frame buffer for pre-event recording
         self.frame_buffer: deque = deque(maxlen=settings.CLIP_PRE_SECONDS * 30)
@@ -95,6 +105,8 @@ class DetectionPipeline:
         self.face_detect_interval = 5     # Run face detection every 5 frames
         self.identity_match_interval = 15  # Run identity matching every 15 frames
         self.pose_interval = 2            # Run pose every 2 frames (important for concealment)
+        self.zone_check_interval = 3      # Check zone positions every 3 frames
+        self.timeout_check_interval = 150  # Check journey timeouts every 150 frames (~5s)
         
         self._running = False
         self._track_counter = 0
@@ -127,6 +139,10 @@ class DetectionPipeline:
                 
                 # Store frame in buffer (for pre-event clips)
                 self.frame_buffer.append((frame.copy(), timestamp))
+                
+                # Track frame dimensions for zone calculations
+                if self.frame_height == 0:
+                    self.frame_height, self.frame_width = frame.shape[:2]
                 
                 # Process frame
                 await self._process_frame(frame, timestamp)
@@ -191,6 +207,23 @@ class DetectionPipeline:
                 
                 if event and event.confidence >= settings.CONCEALMENT_CONFIDENCE_THRESHOLD:
                     await self._handle_concealment_event(person, event, timestamp)
+        
+        # === STEP 4: Zone Tracking (for persons with active journeys) ===
+        if self.frame_count % self.zone_check_interval == 0:
+            for track_id, person in self.tracked_persons.items():
+                if self.zone_tracker.get_journey(track_id):
+                    self.zone_tracker.update_position(
+                        track_id=track_id,
+                        bbox=person.bbox,
+                        frame_w=self.frame_width,
+                        frame_h=self.frame_height,
+                        timestamp=timestamp,
+                        camera_id=self.camera_id,
+                    )
+        
+        # Check journey timeouts periodically
+        if self.frame_count % self.timeout_check_interval == 0:
+            self.zone_tracker.check_timeouts(timestamp)
         
         # Clean up stale tracks
         self._cleanup_tracks(timestamp)
@@ -300,6 +333,15 @@ class DetectionPipeline:
             f"(track={person.track_id}, confidence={event.confidence:.0%})"
         )
         
+        # Start zone-based journey tracking for this person
+        self.zone_tracker.start_journey(
+            track_id=person.track_id,
+            person_id=person.person_id,
+            camera_id=self.camera_id,
+            concealment_time=timestamp,
+            concealment_description=event.description,
+        )
+        
         # Start capturing evidence clip
         clip = ClipCapture(
             track_id=person.track_id,
@@ -360,6 +402,24 @@ class DetectionPipeline:
         for tid in stale:
             self.concealment_detector.clear_track(tid)
             del self.tracked_persons[tid]
+
+    async def _on_journey_classified(self, journey: PersonJourney):
+        """Called by ZoneTracker when a theft/purchase determination is made."""
+        logger.info(
+            f"Journey classified: {journey.track_id} → "
+            f"{journey.classification.value} ({journey.classification_confidence:.0%})"
+        )
+        
+        if self.on_theft_classified:
+            await self.on_theft_classified(
+                track_id=journey.track_id,
+                person_id=journey.person_id,
+                camera_id=self.camera_id,
+                classification=journey.classification,
+                confidence=journey.classification_confidence,
+                reason=journey.classification_reason,
+                journey=journey,
+            )
 
     def stop(self):
         """Stop the pipeline."""
