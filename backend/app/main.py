@@ -67,6 +67,38 @@ os.makedirs("/app/uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="/app/uploads"), name="uploads")
 
 
+def _run_migrations(engine, inspector):
+    """Add missing columns to existing tables (lightweight migration)."""
+    from sqlalchemy import text as sa_text
+    migrations = [
+        # Person manual entry fields
+        ("persons", "full_name", "VARCHAR(255)"),
+        ("persons", "date_of_birth", "VARCHAR(50)"),
+        ("persons", "address", "TEXT"),
+        ("persons", "phone_number", "VARCHAR(50)"),
+        ("persons", "drivers_license", "VARCHAR(100)"),
+        ("persons", "id_photo_path", "VARCHAR(500)"),
+        ("persons", "id_type", "VARCHAR(50)"),
+        # Incident classification fields
+        ("incidents", "theft_classification", "VARCHAR(50)"),
+        ("incidents", "classification_confidence", "FLOAT"),
+        ("incidents", "classification_reason", "TEXT"),
+        ("incidents", "visited_register", "BOOLEAN DEFAULT FALSE"),
+        ("incidents", "register_dwell_seconds", "FLOAT"),
+        ("incidents", "concealment_count", "INTEGER DEFAULT 1"),
+    ]
+    with engine.connect() as conn:
+        for table, column, col_type in migrations:
+            try:
+                existing_cols = [c["name"] for c in inspector.get_columns(table)]
+                if column not in existing_cols:
+                    conn.execute(sa_text(f'ALTER TABLE {table} ADD COLUMN {column} {col_type}'))
+                    conn.commit()
+                    print(f"  Migration: added {table}.{column}")
+            except Exception as e:
+                print(f"  Migration skip {table}.{column}: {e}")
+
+
 @app.on_event("startup")
 def startup():
     """Initialize database tables and seed admin on startup."""
@@ -83,6 +115,9 @@ def startup():
             Base.metadata.drop_all(bind=engine)
         Base.metadata.create_all(bind=engine)
         print(f"DB ready — {len(Base.metadata.tables)} tables")
+
+        # Migrate: add new columns if they don't exist
+        _run_migrations(engine, inspector)
     except Exception as e:
         print(f"DB init error: {e}")
         try:
