@@ -130,17 +130,11 @@ def reset_and_seed():
 
     db = SessionLocal()
     try:
-        # Wipe all data (order matters for FK constraints)
-        for model in [
-            Alert, Incident, FeaturePermission, RoleTemplate,
-            CashTransaction, CashAlert, CashSession,
-            PerformanceMetric, PerformanceReview, ReviewTemplate, Shift,
-            TrafficCount, TrafficVisitor,
-            OutOfStockAlert, ShelfProduct, Product, Shelf, StoreScan,
-            HeatmapData, FridgeDoorEvent, RevenueRecord, DailyAnalytics,
-            Camera, Person, Location, User,
-        ]:
-            db.query(model).delete()
+        # Wipe all data using TRUNCATE CASCADE to handle all FK constraints
+        from sqlalchemy import text as sql_text
+        table_names = [t.name for t in Base.metadata.sorted_tables]
+        for tname in table_names:
+            db.execute(sql_text(f'TRUNCATE TABLE "{tname}" CASCADE'))
         db.commit()
 
         # --- Seed admin user ---
