@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     SECRET_KEY: str = "change-me-in-production-use-openssl-rand-hex-32"
+    CORS_ORIGINS: str = "*"
     
     # Database
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/retailguard"
