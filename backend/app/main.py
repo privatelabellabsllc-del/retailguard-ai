@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
+from sqlalchemy import text, inspect
 from app.config import settings
 from app.database import engine, Base
 from app.api import auth, incidents, alerts, persons, cameras
@@ -9,17 +9,36 @@ from app.api import traffic, team, cash, shelves, analytics, permissions
 # Import all models so they register with Base.metadata
 from app.models import *  # noqa
 
-# Create tables - handle gracefully if some already exist with different types
-try:
+
+def init_db():
+    """Initialize database tables, handling conflicts with existing schema."""
+    inspector = inspect(engine)
+    existing = inspector.get_table_names()
+
+    # Check if we need a fresh start (new V2 tables missing)
+    v2_tables = ["traffic_counts", "shifts", "cash_sessions", "shelves", "heatmap_data"]
+    needs_v2 = not any(t in existing for t in v2_tables)
+
+    if needs_v2 and existing:
+        # Drop all tables and recreate to avoid FK type mismatches
+        print("V2 upgrade detected — recreating all tables...")
+        Base.metadata.drop_all(bind=engine)
+
     Base.metadata.create_all(bind=engine)
+    print(f"Database initialized with {len(Base.metadata.tables)} tables")
+
+
+try:
+    init_db()
 except Exception as e:
-    print(f"Warning: create_all had issues (may be expected for existing tables): {e}")
-    # Try creating tables one by one
-    for table in Base.metadata.sorted_tables:
-        try:
-            table.create(bind=engine, checkfirst=True)
-        except Exception as te:
-            print(f"  Skipping table {table.name}: {te}")
+    print(f"DB init error: {e}")
+    # Last resort — drop everything and recreate
+    try:
+        Base.metadata.drop_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
+        print("Database recreated from scratch")
+    except Exception as e2:
+        print(f"FATAL DB error: {e2}")
 
 app = FastAPI(
     title="RetailGuard AI",
