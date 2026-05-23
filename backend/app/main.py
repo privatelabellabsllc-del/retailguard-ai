@@ -161,22 +161,32 @@ def reset_and_seed():
             name="Front Entrance",
             rtsp_url="rtsp://192.168.1.100:554/stream1",
             location_id=loc.id,
-            status="offline",
-            camera_type="dome",
+            is_active=False,
+            description="Dome camera — main entrance",
         )
         db.add(cam)
         db.flush()
 
         # --- Seed one person (known visitor) ---
+        from app.models.person import PersonStatus
+        from app.models.incident import IncidentType, IncidentSeverity, ReviewStatus
+        from app.models.alert import AlertType, AlertPriority, AlertStatus
+
         person = Person(
             id=uuid.uuid4(),
-            name="John Doe",
-            status="suspect",
-            threat_level="medium",
+            display_name="Male, ~6ft, dark jacket",
+            status=PersonStatus.SUSPECTED_THIEF,
+            threat_level=2,
             first_seen=datetime.utcnow() - timedelta(days=3),
             last_seen=datetime.utcnow() - timedelta(hours=2),
-            visit_count=2,
+            total_visits=2,
+            total_incidents=1,
             notes="Observed concealing merchandise on previous visit",
+            estimated_age_range="25-35",
+            estimated_gender="Male",
+            estimated_height_cm=183.0,
+            estimated_build="medium",
+            location_id=loc.id,
         )
         db.add(person)
         db.flush()
@@ -186,12 +196,14 @@ def reset_and_seed():
             id=uuid.uuid4(),
             camera_id=cam.id,
             person_id=person.id,
-            incident_type="concealment",
-            description="Subject placed wireless earbuds into jacket pocket near electronics aisle",
-            confidence=0.87,
-            status="pending",
+            location_id=loc.id,
+            incident_type=IncidentType.CONCEALMENT,
+            severity=IncidentSeverity.MEDIUM,
+            review_status=ReviewStatus.PENDING,
+            ai_confidence=0.87,
+            ai_description="Subject placed wireless earbuds into jacket pocket near electronics aisle",
             detected_at=datetime.utcnow() - timedelta(hours=1),
-            item_description="Wireless Earbuds — $49.99",
+            estimated_item="Wireless Earbuds",
             estimated_value=49.99,
         )
         db.add(incident)
@@ -200,13 +212,14 @@ def reset_and_seed():
         # --- Seed one alert ---
         alert = Alert(
             id=uuid.uuid4(),
-            alert_type="known_offender",
-            severity="high",
+            alert_type=AlertType.KNOWN_THIEF_ENTERED,
+            priority=AlertPriority.HIGH,
+            status=AlertStatus.ACTIVE,
             title="Known suspect detected at Front Entrance",
-            description="John Doe — previously flagged for concealment — entered via Front Entrance camera",
+            message="Previously flagged for concealment — entered via Front Entrance camera",
             person_id=person.id,
             camera_id=cam.id,
-            is_active=True,
+            match_confidence=0.91,
             created_at=datetime.utcnow() - timedelta(minutes=30),
         )
         db.add(alert)
