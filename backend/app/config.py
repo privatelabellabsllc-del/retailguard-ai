@@ -51,6 +51,8 @@ class Settings(BaseSettings):
     # JWT
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 480  # 8 hours for shift workers
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     
     # Alerts
     ALERT_WEBSOCKET_ENABLED: bool = True
