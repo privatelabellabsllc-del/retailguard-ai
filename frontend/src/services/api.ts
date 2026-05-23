@@ -533,6 +533,19 @@ export const permissions = {
   },
 };
 
-// ─── Default Export ──────────────────────────
+// ─── Unified API Object ──────────────────────
+const apiService = Object.assign(api, {
+  auth,
+  incidents,
+  alerts,
+  persons,
+  cameras,
+  traffic,
+  team,
+  cash,
+  shelves,
+  analytics,
+  permissions,
+});
 
-export default api;
+export default apiService;
