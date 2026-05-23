@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { persons as personsApi } from '../services/api';
 
 interface BlacklistedPerson {
   id: string;
-  name: string;
-  person_id: string;
-  reason: string;
-  date_blacklisted: string;
-  total_visits_since: number;
-  recent_detection: boolean;
-  photo_url?: string;
+  display_name?: string;
+  status?: string;
+  threat_level?: number;
+  notes?: string;
+  best_portrait_path?: string;
+  total_visits?: number;
+  total_incidents?: number;
+  total_confirmed_thefts?: number;
+  first_seen?: string;
+  last_seen?: string;
+  estimated_build?: string;
+  estimated_height_cm?: number;
 }
 
 const StatCard: React.FC<{ label: string; value: string | number; icon: string }> = ({ label, value, icon }) => (
@@ -35,6 +40,7 @@ const BlacklistPage: React.FC = () => {
   const [searchId, setSearchId] = useState('');
   const [addReason, setAddReason] = useState('');
   const [addLoading, setAddLoading] = useState(false);
+  const [removeLoading, setRemoveLoading] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBlacklist();
@@ -42,21 +48,29 @@ const BlacklistPage: React.FC = () => {
 
   const fetchBlacklist = async () => {
     try {
-      const res = await api.persons.list({ blacklisted: true });
-      setPersons(res.data || res || []);
+      const data = await personsApi.blacklist();
+      if (Array.isArray(data)) {
+        setPersons(data);
+      } else {
+        setPersons([]);
+      }
     } catch (err) {
       console.error('Failed to fetch blacklist:', err);
+      setPersons([]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleRemove = async (id: string) => {
+    setRemoveLoading(id);
     try {
-      await api.persons.update(id, { blacklisted: false });
+      await personsApi.blacklistPerson(id, false);
       setPersons((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
       console.error('Failed to remove from blacklist:', err);
+    } finally {
+      setRemoveLoading(null);
     }
   };
 
@@ -64,7 +78,7 @@ const BlacklistPage: React.FC = () => {
     e.preventDefault();
     setAddLoading(true);
     try {
-      await api.persons.update(searchId, { blacklisted: true, blacklist_reason: addReason });
+      await personsApi.blacklistPerson(searchId, true, addReason);
       setShowAddModal(false);
       setSearchId('');
       setAddReason('');
@@ -76,13 +90,8 @@ const BlacklistPage: React.FC = () => {
     }
   };
 
-  const thisMonth = persons.filter((p) => {
-    const d = new Date(p.date_blacklisted);
-    const now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  });
-
-  const autoDetected = persons.filter((p) => p.recent_detection).length;
+  const highThreat = persons.filter(p => (p.threat_level || 0) >= 3).length;
+  const totalThefts = persons.reduce((sum, p) => sum + (p.total_confirmed_thefts || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -107,8 +116,8 @@ const BlacklistPage: React.FC = () => {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard label="Total Blacklisted" value={persons.length} icon="🚫" />
-        <StatCard label="Added This Month" value={thisMonth.length} icon="📅" />
-        <StatCard label="Auto-Detected Visits" value={autoDetected} icon="👁️" />
+        <StatCard label="High Threat" value={highThreat} icon="⚠️" />
+        <StatCard label="Total Confirmed Thefts" value={totalThefts} icon="🔒" />
       </div>
 
       {/* Grid */}
@@ -137,53 +146,65 @@ const BlacklistPage: React.FC = () => {
             >
               {/* Top row */}
               <div className="flex items-start gap-3 mb-4">
-                {/* Photo placeholder */}
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                  {person.photo_url ? (
-                    <img src={person.photo_url} alt="" className="w-full h-full rounded-xl object-cover" />
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-lg flex-shrink-0 overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  {person.best_portrait_path ? (
+                    <img src={person.best_portrait_path} alt="" className="w-full h-full rounded-xl object-cover" />
                   ) : (
                     '👤'
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-white truncate">{person.name || 'Unknown'}</h3>
-                    {person.recent_detection && (
+                    <h3 className="text-sm font-semibold text-white truncate">{person.display_name || 'Unknown'}</h3>
+                    {person.threat_level && person.threat_level >= 3 && (
                       <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium text-red-300 border border-red-500/20" style={{ background: 'rgba(239,68,68,0.1)' }}>
                         <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-                        Active Alert
+                        High Threat
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-white/35 mt-0.5">ID: {person.person_id || person.id}</p>
+                  <p className="text-xs text-white/35 mt-0.5">ID: {person.id}</p>
                 </div>
               </div>
 
               {/* Details */}
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-xs">
-                  <span className="text-white/35">Reason</span>
-                  <span className="text-white/70 text-right max-w-[60%] truncate">{person.reason || '—'}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-white/35">Blacklisted</span>
+                  <span className="text-white/35">Threat Level</span>
                   <span className="text-white/70">
-                    {person.date_blacklisted ? new Date(person.date_blacklisted).toLocaleDateString() : '—'}
+                    {person.threat_level ? '🔴'.repeat(person.threat_level) + '⚪'.repeat(4 - person.threat_level) : '—'}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-white/35">Visits since</span>
-                  <span className="text-white/70">{person.total_visits_since ?? 0}</span>
+                  <span className="text-white/35">Confirmed Thefts</span>
+                  <span className="text-red-400 font-medium">{person.total_confirmed_thefts || 0}</span>
                 </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-white/35">Total Incidents</span>
+                  <span className="text-white/70">{person.total_incidents || 0}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-white/35">Last Seen</span>
+                  <span className="text-white/70">
+                    {person.last_seen ? new Date(person.last_seen).toLocaleDateString() : '—'}
+                  </span>
+                </div>
+                {person.notes && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-white/35">Notes</span>
+                    <span className="text-white/70 text-right max-w-[60%] truncate">{person.notes}</span>
+                  </div>
+                )}
               </div>
 
               {/* Actions */}
               <div className="flex gap-2 pt-3 border-t border-white/[0.05]">
                 <button
                   onClick={() => handleRemove(person.id)}
-                  className="flex-1 px-3 py-2 rounded-xl text-xs font-medium text-white/60 border border-white/[0.06] transition-all duration-200 hover:bg-white/[0.04] hover:text-white/80"
+                  disabled={removeLoading === person.id}
+                  className="flex-1 px-3 py-2 rounded-xl text-xs font-medium text-white/60 border border-white/[0.06] transition-all duration-200 hover:bg-white/[0.04] hover:text-white/80 disabled:opacity-50"
                 >
-                  Remove
+                  {removeLoading === person.id ? 'Removing...' : 'Remove'}
                 </button>
                 <button className="flex-1 px-3 py-2 rounded-xl text-xs font-medium text-blue-400 border border-blue-500/20 transition-all duration-200 hover:bg-blue-500/10">
                   View History
@@ -228,7 +249,6 @@ const BlacklistPage: React.FC = () => {
                   value={addReason}
                   onChange={(e) => setAddReason(e.target.value)}
                   placeholder="Reason for blacklisting"
-                  required
                   className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
                   style={{ background: 'rgba(0,0,0,0.3)' }}
                 />

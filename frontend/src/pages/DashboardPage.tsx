@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api';
+import { incidents as incidentsApi, alerts as alertsApi, streams as streamsApi } from '../services/api';
 
 interface StatCard {
   title: string;
@@ -10,14 +10,6 @@ interface StatCard {
   icon: string;
 }
 
-interface Incident {
-  id: string;
-  title: string;
-  severity: 'high' | 'medium' | 'low';
-  time: string;
-  location: string;
-}
-
 interface TeamMember {
   name: string;
   role: string;
@@ -25,24 +17,16 @@ interface TeamMember {
   avatar: string;
 }
 
-interface AIInsight {
-  id: string;
-  text: string;
-  type: 'info' | 'warning' | 'success';
-  time: string;
-}
-
 const AnimatedNumber = ({ value, prefix = '', suffix = '' }: { value: number; prefix?: string; suffix?: string }) => {
   const [display, setDisplay] = useState(0);
 
   useEffect(() => {
-    let start = 0;
+    let current = 0;
     const end = value;
     const duration = 1200;
     const steps = 40;
     const increment = end / steps;
     const stepTime = duration / steps;
-    let current = start;
 
     const timer = setInterval(() => {
       current += increment;
@@ -121,45 +105,49 @@ const HourlyTrafficChart = () => {
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<StatCard[]>([
-    { title: 'Total Visitors Today', value: 2847, icon: '👥', trend: 12.5 },
-    { title: 'Revenue Today', value: 18420, prefix: '$', icon: '💰', trend: 8.3 },
-    { title: 'Active Alerts', value: 3, icon: '🔔', trend: -25 },
-    { title: 'Conversion Rate', value: 34, suffix: '%', icon: '📊', trend: 4.2 },
+    { title: 'Total Incidents', value: 0, icon: '🔍', trend: 0 },
+    { title: 'Pending Review', value: 0, icon: '⏳', trend: 0 },
+    { title: 'Confirmed Thefts', value: 0, icon: '🚨', trend: 0 },
+    { title: 'Est. Loss', value: 0, prefix: '$', icon: '💰', trend: 0 },
   ]);
-  const [incidents, setIncidents] = useState<Incident[]>([
-    { id: '1', title: 'Suspicious activity — Aisle 5', severity: 'high', time: '2 min ago', location: 'Store A' },
-    { id: '2', title: 'Cash register variance detected', severity: 'medium', time: '15 min ago', location: 'Store B' },
-    { id: '3', title: 'Door sensor triggered after hours', severity: 'low', time: '1 hr ago', location: 'Store A' },
-  ]);
-  const [team, setTeam] = useState<TeamMember[]>([
+  const [activeAlerts, setActiveAlerts] = useState<any[]>([]);
+  const [aiStatus, setAiStatus] = useState<{ ai_available: boolean; active_streams: number } | null>(null);
+  const [team] = useState<TeamMember[]>([
     { name: 'Sarah K.', role: 'Floor Manager', status: 'online', avatar: '👩‍💼' },
     { name: 'Marcus T.', role: 'Security', status: 'online', avatar: '👨‍✈️' },
     { name: 'Aisha R.', role: 'Cashier', status: 'away', avatar: '👩' },
     { name: 'David L.', role: 'Stock', status: 'offline', avatar: '👨' },
   ]);
-  const [insights, setInsights] = useState<AIInsight[]>([
-    { id: '1', text: 'Traffic peaked 23% higher than last Tuesday — likely due to the flash sale on electronics. Consider extending promotions.', type: 'info', time: '5 min ago' },
-    { id: '2', text: 'Aisle 7 dwell time increased 40% this week. Customers are spending more time near new seasonal displays.', type: 'success', time: '12 min ago' },
-    { id: '3', text: 'Out-of-stock rate for dairy products rose to 8%. Recommend increasing reorder frequency.', type: 'warning', time: '30 min ago' },
-  ]);
-  const [outOfStock] = useState(12);
-  const [cashStatus] = useState<'open' | 'closed'>('open');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [dashRes] = await Promise.all([
-          api.get('/api/dashboard/overview'),
+        const [statsRes, alertsRes, streamRes] = await Promise.allSettled([
+          incidentsApi.stats(),
+          alertsApi.list(),
+          streamsApi.status(),
         ]);
-        if (dashRes.data) {
-          if (dashRes.data.stats) setStats(dashRes.data.stats);
-          if (dashRes.data.incidents) setIncidents(dashRes.data.incidents);
-          if (dashRes.data.team) setTeam(dashRes.data.team);
-          if (dashRes.data.insights) setInsights(dashRes.data.insights);
+
+        if (statsRes.status === 'fulfilled' && statsRes.value) {
+          const s = statsRes.value;
+          setStats([
+            { title: 'Total Incidents', value: s.total_incidents || 0, icon: '🔍', trend: 0 },
+            { title: 'Pending Review', value: s.pending_review || 0, icon: '⏳', trend: 0 },
+            { title: 'Confirmed Thefts', value: s.confirmed_thefts || 0, icon: '🚨', trend: 0 },
+            { title: 'Est. Loss', value: Math.round(s.total_estimated_loss || 0), prefix: '$', icon: '💰', trend: 0 },
+          ]);
+        }
+
+        if (alertsRes.status === 'fulfilled' && Array.isArray(alertsRes.value)) {
+          setActiveAlerts(alertsRes.value.slice(0, 5));
+        }
+
+        if (streamRes.status === 'fulfilled' && streamRes.value) {
+          setAiStatus(streamRes.value);
         }
       } catch {
-        // Using placeholder data
+        // Keep fallback data
       } finally {
         setLoading(false);
       }
@@ -168,7 +156,8 @@ export default function DashboardPage() {
   }, []);
 
   const severityColor: Record<string, string> = {
-    high: 'bg-red-500',
+    critical: 'bg-red-500',
+    high: 'bg-orange-500',
     medium: 'bg-amber-500',
     low: 'bg-blue-400',
   };
@@ -179,18 +168,24 @@ export default function DashboardPage() {
     offline: 'bg-white/20',
   };
 
-  const insightIcon: Record<string, string> = {
-    info: '💡',
-    warning: '⚠️',
-    success: '✅',
-  };
-
   return (
     <div className="min-h-screen p-8 space-y-6">
       {/* Header */}
-      <div className="mb-2">
-        <h1 className="text-[28px] font-bold text-white tracking-tight">Dashboard</h1>
-        <p className="text-[13px] text-white/40 mt-1">Welcome back — here's what's happening today</p>
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <h1 className="text-[28px] font-bold text-white tracking-tight">Dashboard</h1>
+          <p className="text-[13px] text-white/40 mt-1">Welcome back — here's what's happening today</p>
+        </div>
+        {/* AI Status */}
+        <div className="flex items-center gap-2 bg-white/[0.03] backdrop-blur-xl border border-white/[0.05] rounded-full px-4 py-2">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${aiStatus?.ai_available ? 'bg-emerald-400' : 'bg-red-400'}`} />
+            <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${aiStatus?.ai_available ? 'bg-emerald-400' : 'bg-red-400'}`} />
+          </span>
+          <span className={`text-xs font-medium ${aiStatus?.ai_available ? 'text-emerald-400' : 'text-red-400'}`}>
+            {aiStatus ? (aiStatus.ai_available ? `AI Active · ${aiStatus.active_streams} stream${aiStatus.active_streams !== 1 ? 's' : ''}` : 'AI Offline') : 'Checking AI...'}
+          </span>
+        </div>
       </div>
 
       {/* Stat Cards */}
@@ -200,32 +195,41 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Traffic + Incidents */}
+      {/* Traffic + Active Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
           <HourlyTrafficChart />
         </div>
         <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.05] rounded-2xl p-6 transition-all duration-300">
-          <h3 className="text-[15px] font-semibold text-white mb-1">Active Incidents</h3>
-          <p className="text-[12px] text-white/30 mb-4">{incidents.length} ongoing</p>
+          <h3 className="text-[15px] font-semibold text-white mb-1">Active Alerts</h3>
+          <p className="text-[12px] text-white/30 mb-4">
+            {activeAlerts.length > 0 ? `${activeAlerts.length} alert${activeAlerts.length !== 1 ? 's' : ''}` : 'No active alerts'}
+          </p>
           <div className="space-y-3">
-            {incidents.map((inc) => (
+            {activeAlerts.length > 0 ? activeAlerts.map((alert: any) => (
               <div
-                key={inc.id}
+                key={alert.id}
                 className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.05] transition-all duration-200 cursor-pointer"
               >
-                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${severityColor[inc.severity]}`} />
+                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${severityColor[alert.priority] || 'bg-blue-400'}`} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] text-white/80 font-medium truncate">{inc.title}</p>
-                  <p className="text-[11px] text-white/30 mt-0.5">{inc.location} · {inc.time}</p>
+                  <p className="text-[13px] text-white/80 font-medium truncate">{alert.title || alert.alert_type}</p>
+                  <p className="text-[11px] text-white/30 mt-0.5">
+                    {alert.person_display_name || 'Unknown'} · {alert.created_at ? new Date(alert.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                  </p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="text-center py-8">
+                <span className="text-3xl mb-2 block">✅</span>
+                <p className="text-[13px] text-white/30">All clear — no active alerts</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Team + OOS + Cash */}
+      {/* Team + AI Insights */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Team on Duty */}
         <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.05] rounded-2xl p-6 transition-all duration-300">
@@ -249,51 +253,27 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Out of Stock */}
+        {/* AI Pipeline Status */}
         <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.05] rounded-2xl p-6 transition-all duration-300 flex flex-col items-center justify-center text-center">
-          <div className="text-4xl mb-3">📦</div>
-          <div className="text-4xl font-bold text-amber-400 mb-1">
-            <AnimatedNumber value={outOfStock} />
+          <div className="text-4xl mb-3">🧠</div>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-semibold mb-2 ${aiStatus?.ai_available ? 'bg-emerald-400/10 text-emerald-400' : 'bg-red-400/10 text-red-400'}`}>
+            <div className={`w-2 h-2 rounded-full ${aiStatus?.ai_available ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+            {aiStatus?.ai_available ? 'AI Pipeline Active' : 'AI Pipeline Offline'}
           </div>
-          <p className="text-[13px] text-white/40 font-medium">Out of Stock Items</p>
-          <p className="text-[11px] text-white/25 mt-1">Across all departments</p>
-          <button className="mt-4 text-[12px] text-blue-400 hover:text-blue-300 font-medium transition-colors duration-200">
-            View Details →
-          </button>
+          <p className="text-[13px] text-white/40 font-medium">Detection Engine</p>
+          <p className="text-[11px] text-white/25 mt-1">
+            {aiStatus ? `${aiStatus.active_streams} active stream${aiStatus.active_streams !== 1 ? 's' : ''}` : 'Loading...'}
+          </p>
         </div>
 
-        {/* Cash Session */}
+        {/* Quick Stats */}
         <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.05] rounded-2xl p-6 transition-all duration-300 flex flex-col items-center justify-center text-center">
-          <div className="text-4xl mb-3">💵</div>
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-semibold mb-2 ${cashStatus === 'open' ? 'bg-emerald-400/10 text-emerald-400' : 'bg-red-400/10 text-red-400'}`}>
-            <div className={`w-2 h-2 rounded-full ${cashStatus === 'open' ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
-            {cashStatus === 'open' ? 'Session Active' : 'Session Closed'}
+          <div className="text-4xl mb-3">📊</div>
+          <div className="text-4xl font-bold text-blue-400 mb-1">
+            <AnimatedNumber value={stats[0].value} />
           </div>
-          <p className="text-[13px] text-white/40 font-medium">Cash Session Status</p>
-          <p className="text-[11px] text-white/25 mt-1">Started at 8:00 AM</p>
-        </div>
-      </div>
-
-      {/* AI Insights */}
-      <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.05] rounded-2xl p-6 transition-all duration-300">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-lg">🧠</span>
-          <h3 className="text-[15px] font-semibold text-white">AI Insights</h3>
-        </div>
-        <p className="text-[12px] text-white/30 mb-5">Powered by RetailGuard Intelligence</p>
-        <div className="space-y-3">
-          {insights.map((insight) => (
-            <div
-              key={insight.id}
-              className="relative flex gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.05] transition-all duration-200"
-            >
-              <span className="text-lg flex-shrink-0">{insightIcon[insight.type]}</span>
-              <div className="flex-1">
-                <p className="text-[13px] text-white/70 leading-relaxed">{insight.text}</p>
-                <p className="text-[11px] text-white/25 mt-2">{insight.time}</p>
-              </div>
-            </div>
-          ))}
+          <p className="text-[13px] text-white/40 font-medium">Total Incidents Tracked</p>
+          <p className="text-[11px] text-white/25 mt-1">By AI detection system</p>
         </div>
       </div>
     </div>

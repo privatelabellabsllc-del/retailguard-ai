@@ -1,16 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { cameras as camerasApi, streams as streamsApi } from '../services/api';
 
 interface Camera {
   id: string;
   name: string;
-  location: string;
-  status: 'online' | 'offline';
-  ip: string;
-  type: string;
-  resolution: string;
-  last_seen: string;
-  rtsp_url?: string;
+  description?: string;
+  channel_number?: number;
+  is_active?: boolean;
+  is_ptz?: boolean;
+  resolution?: string;
+  fps?: number;
+  ai_enabled?: boolean;
+  position_x?: number;
+  position_y?: number;
+}
+
+interface StreamStatus {
+  ai_available: boolean;
+  active_streams: number;
+  face_cache?: { persons: number; embeddings: number };
 }
 
 const StatCard: React.FC<{ label: string; value: string | number; icon: string; color?: string }> = ({ label, value, icon, color }) => (
@@ -31,21 +39,35 @@ const StatCard: React.FC<{ label: string; value: string | number; icon: string; 
 
 const CamerasPage: React.FC = () => {
   const [cameras, setCameras] = useState<Camera[]>([]);
+  const [streamStatus, setStreamStatus] = useState<StreamStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [formData, setFormData] = useState({ name: '', rtsp_url: '', location: '', type: 'indoor' });
+  const [formData, setFormData] = useState({ name: '', rtsp_url: '', location_id: '', description: '', channel_number: '' });
   const [addLoading, setAddLoading] = useState(false);
+  const [streamActionLoading, setStreamActionLoading] = useState<string | null>(null);
+  const [demoRunning, setDemoRunning] = useState(false);
 
   useEffect(() => {
-    fetchCameras();
+    fetchData();
   }, []);
 
-  const fetchCameras = async () => {
+  const fetchData = async () => {
     try {
-      const res = await api.cameras.list();
-      setCameras(res.data || res || []);
+      const [camsData, statusData] = await Promise.allSettled([
+        camerasApi.list(),
+        streamsApi.status(),
+      ]);
+
+      if (camsData.status === 'fulfilled') {
+        const d = Array.isArray(camsData.value) ? camsData.value : [];
+        setCameras(d);
+      }
+
+      if (statusData.status === 'fulfilled' && statusData.value) {
+        setStreamStatus(statusData.value);
+      }
     } catch (err) {
-      console.error('Failed to fetch cameras:', err);
+      console.error('Failed to fetch data:', err);
     } finally {
       setLoading(false);
     }
@@ -55,10 +77,16 @@ const CamerasPage: React.FC = () => {
     e.preventDefault();
     setAddLoading(true);
     try {
-      await api.cameras.create(formData);
+      await camerasApi.create({
+        name: formData.name,
+        rtsp_url: formData.rtsp_url,
+        location_id: formData.location_id,
+        description: formData.description || undefined,
+        channel_number: formData.channel_number ? parseInt(formData.channel_number) : undefined,
+      } as any);
       setShowAddForm(false);
-      setFormData({ name: '', rtsp_url: '', location: '', type: 'indoor' });
-      fetchCameras();
+      setFormData({ name: '', rtsp_url: '', location_id: '', description: '', channel_number: '' });
+      fetchData();
     } catch (err) {
       console.error('Failed to add camera:', err);
     } finally {
@@ -66,8 +94,61 @@ const CamerasPage: React.FC = () => {
     }
   };
 
-  const online = cameras.filter((c) => c.status === 'online').length;
-  const offline = cameras.length - online;
+  const handleStartAI = async (cameraId: string) => {
+    setStreamActionLoading(cameraId);
+    try {
+      await streamsApi.start(cameraId);
+      const status = await streamsApi.status();
+      setStreamStatus(status);
+    } catch (err) {
+      console.error('Failed to start AI:', err);
+    } finally {
+      setStreamActionLoading(null);
+    }
+  };
+
+  const handleStopAI = async (cameraId: string) => {
+    setStreamActionLoading(cameraId);
+    try {
+      await streamsApi.stop(cameraId);
+      const status = await streamsApi.status();
+      setStreamStatus(status);
+    } catch (err) {
+      console.error('Failed to stop AI:', err);
+    } finally {
+      setStreamActionLoading(null);
+    }
+  };
+
+  const handleDemoToggle = async () => {
+    setStreamActionLoading('demo');
+    try {
+      if (demoRunning) {
+        await streamsApi.demoStop();
+        setDemoRunning(false);
+      } else {
+        await streamsApi.demoStart(30);
+        setDemoRunning(true);
+      }
+    } catch (err) {
+      console.error('Failed to toggle demo:', err);
+    } finally {
+      setStreamActionLoading(null);
+    }
+  };
+
+  const handleDemoGenerate = async () => {
+    setStreamActionLoading('demo-gen');
+    try {
+      await streamsApi.demoGenerate();
+    } catch (err) {
+      console.error('Failed to generate demo incident:', err);
+    } finally {
+      setStreamActionLoading(null);
+    }
+  };
+
+  const activeCount = cameras.filter(c => c.is_active).length;
 
   return (
     <div className="space-y-6">
@@ -77,24 +158,73 @@ const CamerasPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-white tracking-tight">Cameras</h1>
           <p className="text-sm text-white/40 mt-1">Monitor and manage camera feeds</p>
         </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="px-4 py-2.5 rounded-full text-sm font-medium text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
-          style={{
-            background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
-            boxShadow: '0 4px 14px rgba(59,130,246,0.3)',
-          }}
-        >
-          + Add Camera
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Demo Controls */}
+          <button
+            onClick={handleDemoGenerate}
+            disabled={streamActionLoading === 'demo-gen'}
+            className="px-4 py-2.5 rounded-full text-sm font-medium text-yellow-400 border border-yellow-500/30 transition-all duration-200 hover:bg-yellow-500/10 active:scale-[0.97] disabled:opacity-50"
+          >
+            {streamActionLoading === 'demo-gen' ? '...' : '⚡ Generate Incident'}
+          </button>
+          <button
+            onClick={handleDemoToggle}
+            disabled={streamActionLoading === 'demo'}
+            className={`px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-200 active:scale-[0.97] disabled:opacity-50 ${
+              demoRunning
+                ? 'text-red-400 border border-red-500/30 hover:bg-red-500/10'
+                : 'text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10'
+            }`}
+          >
+            {streamActionLoading === 'demo' ? '...' : demoRunning ? '⏹ Stop Demo' : '▶ Start Demo'}
+          </button>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="px-4 py-2.5 rounded-full text-sm font-medium text-white transition-all duration-200 hover:brightness-110 active:scale-[0.97]"
+            style={{
+              background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+              boxShadow: '0 4px 14px rgba(59,130,246,0.3)',
+            }}
+          >
+            + Add Camera
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <StatCard label="Total Cameras" value={cameras.length} icon="📷" />
-        <StatCard label="Online" value={online} icon="🟢" color="text-green-400" />
-        <StatCard label="Offline" value={offline} icon="🔴" color="text-red-400" />
+        <StatCard label="Active" value={activeCount} icon="🟢" color="text-green-400" />
+        <StatCard
+          label="AI Status"
+          value={streamStatus?.ai_available ? 'Online' : 'Offline'}
+          icon="🧠"
+          color={streamStatus?.ai_available ? 'text-emerald-400' : 'text-red-400'}
+        />
+        <StatCard
+          label="AI Streams"
+          value={streamStatus?.active_streams || 0}
+          icon="📡"
+          color="text-blue-400"
+        />
       </div>
+
+      {/* Face Cache Info */}
+      {streamStatus?.face_cache && (
+        <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.05] rounded-2xl p-4 flex items-center gap-6">
+          <span className="text-lg">🧬</span>
+          <div className="flex items-center gap-6 text-sm">
+            <div>
+              <span className="text-white/40">Known Persons: </span>
+              <span className="text-white font-medium">{streamStatus.face_cache.persons}</span>
+            </div>
+            <div>
+              <span className="text-white/40">Face Embeddings: </span>
+              <span className="text-white font-medium">{streamStatus.face_cache.embeddings}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Camera Grid */}
       {loading ? (
@@ -108,6 +238,7 @@ const CamerasPage: React.FC = () => {
         <div className="text-center py-20">
           <span className="text-4xl mb-3 block">📷</span>
           <p className="text-white/40 text-sm">No cameras configured</p>
+          <p className="text-white/25 text-xs mt-1">Add a camera or use Demo Mode to generate test data</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -133,39 +264,68 @@ const CamerasPage: React.FC = () => {
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium backdrop-blur-md"
                   style={{ background: 'rgba(0,0,0,0.5)' }}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${camera.status === 'online' ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
-                  <span className={camera.status === 'online' ? 'text-green-300' : 'text-red-300'}>
-                    {camera.status === 'online' ? 'Online' : 'Offline'}
+                  <span className={`w-1.5 h-1.5 rounded-full ${camera.is_active ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                  <span className={camera.is_active ? 'text-green-300' : 'text-red-300'}>
+                    {camera.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </div>
+
+                {/* AI badge */}
+                {camera.ai_enabled && (
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium backdrop-blur-md bg-emerald-500/20 text-emerald-300">
+                    🧠 AI
+                  </div>
+                )}
               </div>
 
               {/* Info */}
               <div className="p-4 space-y-3">
                 <div>
                   <h3 className="text-sm font-semibold text-white">{camera.name}</h3>
-                  <p className="text-xs text-white/35 mt-0.5">{camera.location}</p>
+                  {camera.description && <p className="text-xs text-white/35 mt-0.5">{camera.description}</p>}
                 </div>
 
                 <div className="space-y-1.5">
+                  {camera.channel_number !== undefined && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-white/30">Channel</span>
+                      <span className="text-white/60">{camera.channel_number}</span>
+                    </div>
+                  )}
+                  {camera.resolution && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-white/30">Resolution</span>
+                      <span className="text-white/60">{camera.resolution}</span>
+                    </div>
+                  )}
+                  {camera.fps && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-white/30">FPS</span>
+                      <span className="text-white/60">{camera.fps}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-xs">
-                    <span className="text-white/30">IP</span>
-                    <span className="text-white/60 font-mono text-[11px]">{camera.ip || '—'}</span>
+                    <span className="text-white/30">PTZ</span>
+                    <span className="text-white/60">{camera.is_ptz ? 'Yes' : 'No'}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-white/30">Type</span>
-                    <span className="text-white/60 capitalize">{camera.type || '—'}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-white/30">Resolution</span>
-                    <span className="text-white/60">{camera.resolution || '—'}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-white/30">Last seen</span>
-                    <span className="text-white/60">
-                      {camera.last_seen ? new Date(camera.last_seen).toLocaleString() : '—'}
-                    </span>
-                  </div>
+                </div>
+
+                {/* AI Controls */}
+                <div className="flex gap-2 pt-2 border-t border-white/[0.05]">
+                  <button
+                    onClick={() => handleStartAI(camera.id)}
+                    disabled={streamActionLoading === camera.id}
+                    className="flex-1 px-3 py-2 rounded-xl text-xs font-medium text-emerald-400 border border-emerald-500/20 transition-all duration-200 hover:bg-emerald-500/10 disabled:opacity-50"
+                  >
+                    {streamActionLoading === camera.id ? '...' : '▶ Start AI'}
+                  </button>
+                  <button
+                    onClick={() => handleStopAI(camera.id)}
+                    disabled={streamActionLoading === camera.id}
+                    className="flex-1 px-3 py-2 rounded-xl text-xs font-medium text-red-400 border border-red-500/20 transition-all duration-200 hover:bg-red-500/10 disabled:opacity-50"
+                  >
+                    {streamActionLoading === camera.id ? '...' : '⏹ Stop AI'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -213,31 +373,27 @@ const CamerasPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5 ml-1">Location</label>
+                <label className="block text-xs font-medium text-white/50 mb-1.5 ml-1">Location ID</label>
                 <input
                   type="text"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  placeholder="e.g. Floor 1, Aisle 3"
+                  value={formData.location_id}
+                  onChange={(e) => setFormData({ ...formData, location_id: e.target.value })}
+                  placeholder="e.g. store-1, floor-2"
                   required
                   className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
                   style={{ background: 'rgba(0,0,0,0.3)' }}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-white/50 mb-1.5 ml-1">Type</label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl text-sm text-white border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 appearance-none"
+                <label className="block text-xs font-medium text-white/50 mb-1.5 ml-1">Description (optional)</label>
+                <input
+                  type="text"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Optional description"
+                  className="w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/25 border border-white/10 outline-none transition-all duration-200 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
                   style={{ background: 'rgba(0,0,0,0.3)' }}
-                >
-                  <option value="indoor">Indoor</option>
-                  <option value="outdoor">Outdoor</option>
-                  <option value="ptz">PTZ</option>
-                  <option value="fisheye">Fisheye</option>
-                  <option value="thermal">Thermal</option>
-                </select>
+                />
               </div>
 
               <div className="flex gap-3 pt-2">

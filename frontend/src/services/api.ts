@@ -110,23 +110,20 @@ export const auth = {
 // ─── Incidents ───────────────────────────────
 
 export const incidents = {
-  list: async (params?: {
-    status?: string;
-    severity?: string;
-    page?: number;
-    per_page?: number;
-  }): Promise<PaginatedResponse<Incident>> => {
-    const { data } = await api.get<PaginatedResponse<Incident>>('/api/incidents', { params });
+  list: async (params?: { status?: string; severity?: string; page?: number; per_page?: number }) => {
+    const { data } = await api.get('/api/incidents', { params });
     return data;
   },
-
-  get: async (id: string): Promise<Incident> => {
-    const { data } = await api.get<Incident>(`/api/incidents/${id}`);
+  get: async (id: string) => {
+    const { data } = await api.get(`/api/incidents/${id}`);
     return data;
   },
-
-  update: async (id: string, payload: Partial<Incident>): Promise<Incident> => {
-    const { data } = await api.patch<Incident>(`/api/incidents/${id}`, payload);
+  stats: async () => {
+    const { data } = await api.get('/api/incidents/stats');
+    return data;
+  },
+  review: async (id: string, action: string, payload?: { notes?: string; estimated_item?: string; estimated_value?: number }) => {
+    const { data } = await api.post(`/api/incidents/${id}/review`, { action, ...payload });
     return data;
   },
 };
@@ -134,18 +131,20 @@ export const incidents = {
 // ─── Alerts ──────────────────────────────────
 
 export const alerts = {
-  list: async (params?: {
-    type?: string;
-    acknowledged?: boolean;
-    page?: number;
-    per_page?: number;
-  }): Promise<PaginatedResponse<Alert>> => {
-    const { data } = await api.get<PaginatedResponse<Alert>>('/api/alerts', { params });
+  list: async () => {
+    const { data } = await api.get('/api/alerts/active');
     return data;
   },
-
-  acknowledge: async (id: string): Promise<Alert> => {
-    const { data } = await api.post<Alert>(`/api/alerts/${id}/acknowledge`);
+  get: async (id: string) => {
+    const { data } = await api.get(`/api/alerts/${id}`);
+    return data;
+  },
+  acknowledge: async (id: string) => {
+    const { data } = await api.post(`/api/alerts/${id}/acknowledge`);
+    return data;
+  },
+  action: async (id: string, action: string, notes?: string) => {
+    const { data } = await api.post(`/api/alerts/${id}/action`, { action, notes });
     return data;
   },
 };
@@ -153,18 +152,32 @@ export const alerts = {
 // ─── Persons ─────────────────────────────────
 
 export const persons = {
-  list: async (params?: {
-    category?: string;
-    search?: string;
-    page?: number;
-    per_page?: number;
-  }): Promise<PaginatedResponse<Person>> => {
-    const { data } = await api.get<PaginatedResponse<Person>>('/api/persons', { params });
+  list: async (params?: { category?: string; search?: string }) => {
+    const { data } = await api.get('/api/persons', { params });
     return data;
   },
-
-  get: async (id: string): Promise<Person> => {
-    const { data } = await api.get<Person>(`/api/persons/${id}`);
+  get: async (id: string) => {
+    const { data } = await api.get(`/api/persons/${id}`);
+    return data;
+  },
+  offenders: async () => {
+    const { data } = await api.get('/api/persons/offenders');
+    return data;
+  },
+  blacklist: async () => {
+    const { data } = await api.get('/api/persons/blacklist');
+    return data;
+  },
+  update: async (id: string, payload: any) => {
+    const { data } = await api.patch(`/api/persons/${id}`, payload);
+    return data;
+  },
+  blacklistPerson: async (id: string, blacklisted: boolean, reason?: string) => {
+    const { data } = await api.post(`/api/persons/${id}/blacklist`, { blacklisted, reason });
+    return data;
+  },
+  sightings: async (id: string) => {
+    const { data } = await api.get(`/api/persons/${id}/sightings`);
     return data;
   },
 };
@@ -172,16 +185,16 @@ export const persons = {
 // ─── Cameras ─────────────────────────────────
 
 export const cameras = {
-  list: async (params?: {
-    status?: string;
-    location_id?: string;
-  }): Promise<Camera[]> => {
-    const { data } = await api.get<Camera[]>('/api/cameras', { params });
+  list: async (params?: { status?: string; location_id?: string }) => {
+    const { data } = await api.get('/api/cameras', { params });
     return data;
   },
-
-  get: async (id: string): Promise<Camera> => {
-    const { data } = await api.get<Camera>(`/api/cameras/${id}`);
+  get: async (id: string) => {
+    const { data } = await api.get(`/api/cameras/${id}`);
+    return data;
+  },
+  create: async (payload: { name: string; rtsp_url: string; location_id: string; description?: string; channel_number?: number }) => {
+    const { data } = await api.post('/api/cameras', payload);
     return data;
   },
 };
@@ -538,6 +551,41 @@ export const permissions = {
   },
 };
 
+// ─── Streams ─────────────────────────────────
+
+export const streams = {
+  status: async () => {
+    const { data } = await api.get('/api/stream/status');
+    return data;
+  },
+  start: async (cameraId: string) => {
+    const { data } = await api.post('/api/stream/start', { camera_id: cameraId });
+    return data;
+  },
+  stop: async (cameraId: string) => {
+    const { data } = await api.post('/api/stream/stop', { camera_id: cameraId });
+    return data;
+  },
+  demoGenerate: async () => {
+    const { data } = await api.post('/api/stream/demo/generate');
+    return data;
+  },
+  demoStart: async (intervalSeconds?: number) => {
+    const { data } = await api.post('/api/stream/demo/start', { interval_seconds: intervalSeconds || 30 });
+    return data;
+  },
+  demoStop: async () => {
+    const { data } = await api.post('/api/stream/demo/stop');
+    return data;
+  },
+};
+
+// ─── Named exports for PersonDetailPage ──────
+export const getPerson = (id: string) => api.get(`/api/persons/${id}`);
+export const getPersonSightings = (id: string) => api.get(`/api/persons/${id}/sightings`);
+export const blacklistPerson = (id: string, data?: any) => api.post(`/api/persons/${id}/blacklist`, data);
+export const updatePerson = (id: string, data: any) => api.patch(`/api/persons/${id}`, data);
+
 // ─── Unified API Object ──────────────────────
 const apiService = Object.assign(api, {
   auth,
@@ -551,6 +599,7 @@ const apiService = Object.assign(api, {
   shelves,
   analytics,
   permissions,
+  streams,
 });
 
 export default apiService;

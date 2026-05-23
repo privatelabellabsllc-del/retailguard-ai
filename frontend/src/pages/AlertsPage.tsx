@@ -1,28 +1,37 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
+import { alerts as alertsApi } from '../services/api';
 
-interface Alert {
+interface AlertItem {
   id: string;
-  type: string;
-  severity: 'critical' | 'high' | 'medium' | 'low';
-  description: string;
-  timestamp: string;
-  camera: string;
-  acknowledged: boolean;
-  personPhoto?: string;
-  personName?: string;
-  isKnownOffender: boolean;
-  previousTheftLink?: string;
+  created_at: string;
+  person_id?: string;
+  person_display_name?: string;
+  person_status?: string;
+  person_threat_level?: number;
+  person_total_thefts?: number;
+  alert_type?: string;
+  priority: string;
+  status: string;
+  title: string;
+  message?: string;
+  tracking_active?: boolean;
+  current_camera_id?: string;
+  reference_clip_url?: string;
+  current_snapshot_path?: string;
+  match_confidence?: number;
+  match_details?: any;
+  best_portrait_path?: string;
 }
 
 type SeverityFilter = 'all' | 'critical' | 'high' | 'medium' | 'low';
 type StatusFilter = 'all' | 'active' | 'acknowledged';
 
 export default function AlertsPage() {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -30,8 +39,12 @@ export default function AlertsPage() {
 
   const loadData = async () => {
     try {
-      const res = await api.alerts.list();
-      setAlerts(res.data || generateMockAlerts());
+      const data = await alertsApi.list();
+      if (Array.isArray(data) && data.length > 0) {
+        setAlerts(data);
+      } else {
+        setAlerts(generateMockAlerts());
+      }
     } catch {
       setAlerts(generateMockAlerts());
     } finally {
@@ -39,55 +52,63 @@ export default function AlertsPage() {
     }
   };
 
-  const generateMockAlerts = (): Alert[] => {
-    const types = ['Theft Detected', 'Suspicious Behavior', 'Unauthorized Access', 'Camera Offline', 'Known Offender Spotted', 'Loitering Alert', 'After-Hours Motion', 'Tag Removal'];
-    const severities: Alert['severity'][] = ['critical', 'high', 'medium', 'low'];
-    const cameras = ['Entrance Cam 1', 'Aisle 3 Cam', 'Checkout Cam 2', 'Electronics Cam', 'Exit Cam 1', 'Parking Lot Cam'];
-    return Array.from({ length: 20 }, (_, i) => {
-      const isOffender = i % 7 === 0;
-      return {
-        id: `alert-${i + 1}`,
-        type: types[i % types.length],
-        severity: severities[i % 4],
-        description: [
-          'Individual detected concealing merchandise in personal bag at electronics display',
-          'Multiple items moved to blind spot area — possible coordinated theft',
-          'Staff-only door opened without keycard authorization',
-          'Camera feed lost — possible tampering detected',
-          'Previously flagged individual entered through main entrance',
-          'Subject loitering near high-value display for extended period',
-          'Motion detected in store after business hours',
-          'Security tag removal attempt detected at fitting rooms',
-        ][i % 8],
-        timestamp: new Date(Date.now() - i * 900000 * (1 + Math.random())).toISOString(),
-        camera: cameras[i % cameras.length],
-        acknowledged: i > 8,
-        isKnownOffender: isOffender,
-        personName: isOffender ? `Known Offender #${100 + i}` : i % 3 === 0 ? `Person-${200 + i}` : undefined,
-      };
-    });
+  const generateMockAlerts = (): AlertItem[] => {
+    const types = ['known_offender', 'theft_detected', 'suspicious_behavior', 'loitering'];
+    const priorities = ['critical', 'high', 'medium', 'low'];
+    return Array.from({ length: 8 }, (_, i) => ({
+      id: `mock-alert-${i + 1}`,
+      created_at: new Date(Date.now() - i * 900000).toISOString(),
+      person_display_name: i % 2 === 0 ? `Person-${100 + i}` : undefined,
+      person_threat_level: i % 2 === 0 ? 3 : undefined,
+      person_total_thefts: i % 2 === 0 ? 2 + i : undefined,
+      alert_type: types[i % types.length],
+      priority: priorities[i % 4],
+      status: i > 4 ? 'acknowledged' : 'active',
+      title: ['Known Offender Spotted', 'Theft Detected', 'Suspicious Behavior', 'Loitering Alert'][i % 4],
+      message: 'AI-detected security event requiring attention',
+      match_confidence: 0.7 + Math.random() * 0.25,
+    }));
   };
 
-  const handleAcknowledge = (id: string) => {
-    setAlerts(prev => prev.map(a => a.id === id ? { ...a, acknowledged: true } : a));
+  const handleAcknowledge = async (id: string) => {
+    setActionLoading(id);
+    try {
+      await alertsApi.acknowledge(id);
+      setAlerts(prev => prev.map(a => a.id === id ? { ...a, status: 'acknowledged' } : a));
+    } catch {
+      setAlerts(prev => prev.map(a => a.id === id ? { ...a, status: 'acknowledged' } : a));
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const severityConfig = {
-    critical: { color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', dot: 'bg-red-400', icon: '🔴' },
-    high: { color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30', dot: 'bg-orange-400', icon: '🟠' },
-    medium: { color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', dot: 'bg-yellow-400', icon: '🟡' },
-    low: { color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30', dot: 'bg-blue-400', icon: '🔵' },
+  const handleAction = async (id: string, action: string) => {
+    setActionLoading(`${id}-${action}`);
+    try {
+      await alertsApi.action(id, action);
+      // Re-fetch
+      const data = await alertsApi.list();
+      if (Array.isArray(data)) setAlerts(data);
+    } catch {
+      // Still acknowledge locally
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const typeIcon = (type: string) => {
-    if (type.includes('Theft')) return '🚨';
-    if (type.includes('Suspicious')) return '👁️';
-    if (type.includes('Unauthorized')) return '🚪';
-    if (type.includes('Camera')) return '📷';
-    if (type.includes('Offender')) return '⚠️';
-    if (type.includes('Loitering')) return '🚶';
-    if (type.includes('After')) return '🌙';
-    if (type.includes('Tag')) return '🏷️';
+  const severityConfig: Record<string, { color: string; bg: string; border: string; dot: string }> = {
+    critical: { color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', dot: 'bg-red-400' },
+    high: { color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30', dot: 'bg-orange-400' },
+    medium: { color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', dot: 'bg-yellow-400' },
+    low: { color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30', dot: 'bg-blue-400' },
+  };
+
+  const typeIcon = (type?: string) => {
+    if (!type) return '📢';
+    if (type.includes('offender') || type.includes('known')) return '⚠️';
+    if (type.includes('theft')) return '🚨';
+    if (type.includes('suspicious')) return '👁️';
+    if (type.includes('loiter')) return '🚶';
     return '📢';
   };
 
@@ -103,17 +124,34 @@ export default function AlertsPage() {
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
 
+  const isKnownOffender = (alert: AlertItem) =>
+    alert.alert_type?.includes('offender') || alert.alert_type?.includes('known') || (alert.person_threat_level && alert.person_threat_level >= 3);
+
   const filtered = alerts.filter(a => {
-    if (severityFilter !== 'all' && a.severity !== severityFilter) return false;
-    if (statusFilter === 'active' && a.acknowledged) return false;
-    if (statusFilter === 'acknowledged' && !a.acknowledged) return false;
+    if (severityFilter !== 'all' && a.priority !== severityFilter) return false;
+    if (statusFilter === 'active' && a.status !== 'active') return false;
+    if (statusFilter === 'acknowledged' && a.status !== 'acknowledged') return false;
     return true;
   });
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="p-8 space-y-6 max-w-[1400px] mx-auto">
+        <div><h1 className="text-3xl font-bold text-white tracking-tight">Alerts</h1></div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-[#2C2C2E]/80 rounded-2xl p-4 border border-white/5 animate-pulse">
+              <div className="h-3 bg-white/10 rounded w-16 mb-2" />
+              <div className="h-7 bg-white/10 rounded w-10" />
+            </div>
+          ))}
+        </div>
+        {[1, 2, 3].map(i => (
+          <div key={i} className="bg-[#2C2C2E]/80 rounded-2xl p-5 border border-white/5 animate-pulse">
+            <div className="h-4 bg-white/10 rounded w-3/4 mb-3" />
+            <div className="h-3 bg-white/10 rounded w-1/2" />
+          </div>
+        ))}
       </div>
     );
   }
@@ -138,7 +176,7 @@ export default function AlertsPage() {
       {/* Severity Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {(['critical', 'high', 'medium', 'low'] as const).map((sev) => {
-          const count = alerts.filter(a => a.severity === sev && !a.acknowledged).length;
+          const count = alerts.filter(a => a.priority === sev && a.status !== 'acknowledged').length;
           const cfg = severityConfig[sev];
           return (
             <button
@@ -183,90 +221,129 @@ export default function AlertsPage() {
       {/* Alert Cards */}
       <div className="space-y-3">
         {filtered.map((alert) => {
-          const cfg = severityConfig[alert.severity];
+          const cfg = severityConfig[alert.priority] || severityConfig.medium;
+          const offender = isKnownOffender(alert);
           return (
             <div
               key={alert.id}
               className={`bg-[#2C2C2E]/80 backdrop-blur-xl rounded-2xl p-5 border transition-all duration-300 hover:border-white/10 ${
-                alert.isKnownOffender
+                offender
                   ? 'border-red-500/40 ring-1 ring-red-500/10'
-                  : alert.acknowledged
+                  : alert.status === 'acknowledged'
                     ? 'border-white/5 opacity-60'
                     : 'border-white/5'
               }`}
             >
               <div className="flex items-start gap-4">
-                {/* Icon / Photo */}
+                {/* Icon */}
                 <div className={`w-12 h-12 rounded-xl ${cfg.bg} flex items-center justify-center shrink-0`}>
-                  {alert.personName ? (
+                  {alert.best_portrait_path ? (
+                    <img src={alert.best_portrait_path} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                  ) : alert.person_display_name ? (
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center">
                       <span className="text-lg">👤</span>
                     </div>
                   ) : (
-                    <span className="text-xl">{typeIcon(alert.type)}</span>
+                    <span className="text-xl">{typeIcon(alert.alert_type)}</span>
                   )}
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm font-semibold text-white">{alert.type}</p>
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <p className="text-sm font-semibold text-white">{alert.title}</p>
                     <span className={`px-2 py-0.5 text-[10px] rounded-full font-medium ${cfg.bg} ${cfg.color}`}>
-                      {alert.severity.toUpperCase()}
+                      {alert.priority.toUpperCase()}
                     </span>
-                    {alert.isKnownOffender && (
+                    {offender && (
                       <span className="px-2 py-0.5 text-[10px] rounded-full font-bold bg-red-500/20 text-red-400 animate-pulse">
                         ⚠️ KNOWN OFFENDER
                       </span>
                     )}
-                    {alert.acknowledged && (
+                    {alert.status === 'acknowledged' && (
                       <span className="px-2 py-0.5 text-[10px] rounded-full bg-gray-500/15 text-gray-500">
                         Acknowledged
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-300 mb-2">{alert.description}</p>
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    <span>{formatTime(alert.timestamp)}</span>
-                    <span>•</span>
-                    <span>📷 {alert.camera}</span>
-                    {alert.personName && (
+                  <p className="text-sm text-gray-300 mb-2">{alert.message || 'Security event detected'}</p>
+                  <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                    <span>{formatTime(alert.created_at)}</span>
+                    {alert.current_camera_id && (
                       <>
                         <span>•</span>
-                        <span className="text-purple-400">👤 {alert.personName}</span>
+                        <span>📷 {alert.current_camera_id}</span>
+                      </>
+                    )}
+                    {alert.person_display_name && (
+                      <>
+                        <span>•</span>
+                        <span className="text-purple-400">👤 {alert.person_display_name}</span>
+                      </>
+                    )}
+                    {alert.match_confidence && (
+                      <>
+                        <span>•</span>
+                        <span className="text-blue-400">
+                          {Math.round((alert.match_confidence > 1 ? alert.match_confidence : alert.match_confidence * 100))}% match
+                        </span>
+                      </>
+                    )}
+                    {alert.person_total_thefts !== undefined && alert.person_total_thefts > 0 && (
+                      <>
+                        <span>•</span>
+                        <span className="text-red-400">{alert.person_total_thefts} prior theft{alert.person_total_thefts > 1 ? 's' : ''}</span>
                       </>
                     )}
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 shrink-0">
-                  {!alert.acknowledged && (
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  {alert.status !== 'acknowledged' && (
                     <button
                       onClick={() => handleAcknowledge(alert.id)}
-                      className="px-3 py-1.5 bg-[#3A3A3C] hover:bg-[#48484A] text-white text-xs font-medium rounded-lg transition-all duration-200 active:scale-95"
+                      disabled={actionLoading === alert.id}
+                      className="px-3 py-1.5 bg-[#3A3A3C] hover:bg-[#48484A] text-white text-xs font-medium rounded-lg transition-all duration-200 active:scale-95 disabled:opacity-50"
                     >
-                      Acknowledge
+                      {actionLoading === alert.id ? '...' : 'Acknowledge'}
                     </button>
                   )}
-                  <button className="px-3 py-1.5 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-lg hover:bg-blue-500/20 transition-all duration-200">
-                    View Video
-                  </button>
-                  {alert.personName && (
-                    <button className="px-3 py-1.5 bg-purple-500/10 text-purple-400 text-xs font-medium rounded-lg hover:bg-purple-500/20 transition-all duration-200">
-                      Track Person
-                    </button>
+                  {alert.status === 'active' && (
+                    <>
+                      <button
+                        onClick={() => handleAction(alert.id, 'call_police')}
+                        disabled={!!actionLoading}
+                        className="px-3 py-1.5 bg-red-500/10 text-red-400 text-xs font-medium rounded-lg hover:bg-red-500/20 transition-all duration-200 disabled:opacity-50"
+                      >
+                        🚔 Police
+                      </button>
+                      <button
+                        onClick={() => handleAction(alert.id, 'escort_out')}
+                        disabled={!!actionLoading}
+                        className="px-3 py-1.5 bg-orange-500/10 text-orange-400 text-xs font-medium rounded-lg hover:bg-orange-500/20 transition-all duration-200 disabled:opacity-50"
+                      >
+                        🚶 Escort
+                      </button>
+                      <button
+                        onClick={() => handleAction(alert.id, 'blacklist')}
+                        disabled={!!actionLoading}
+                        className="px-3 py-1.5 bg-purple-500/10 text-purple-400 text-xs font-medium rounded-lg hover:bg-purple-500/20 transition-all duration-200 disabled:opacity-50"
+                      >
+                        🚫 Blacklist
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
 
-              {/* Known Offender Extra */}
-              {alert.isKnownOffender && (
-                <div className="mt-4 pt-4 border-t border-red-500/10 flex items-center gap-3">
+              {/* Known Offender Extra Info */}
+              {offender && (
+                <div className="mt-4 pt-4 border-t border-red-500/10 flex items-center gap-3 flex-wrap">
                   <span className="text-xs text-red-400">⚠️ This individual has previous theft records.</span>
-                  <button className="text-xs text-red-400 underline hover:text-red-300 transition-colors">
-                    View previous incidents →
-                  </button>
+                  {alert.person_threat_level && (
+                    <span className="text-xs text-orange-400">Threat Level: {'🔴'.repeat(alert.person_threat_level)}{'⚪'.repeat(4 - alert.person_threat_level)}</span>
+                  )}
                 </div>
               )}
             </div>
@@ -275,6 +352,7 @@ export default function AlertsPage() {
 
         {filtered.length === 0 && (
           <div className="text-center py-16">
+            <span className="text-4xl mb-3 block">✅</span>
             <p className="text-gray-500 text-sm">No alerts match your filters</p>
           </div>
         )}

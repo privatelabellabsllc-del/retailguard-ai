@@ -1,38 +1,31 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
+import { persons as personsApi } from '../services/api';
 
-interface IdentityScores {
-  face: number;
-  body: number;
-  gait: number;
-  height: number;
-  marks: number;
-}
-
-interface IncidentRecord {
+interface PersonItem {
   id: string;
-  date: string;
-  type: string;
-  camera: string;
-  value: number;
-}
-
-interface Person {
-  id: string;
-  name: string;
-  totalIncidents: number;
-  riskLevel: 'high' | 'medium' | 'low';
-  lastSeen: string;
-  status: 'active' | 'blacklisted' | 'cleared';
-  identityScores: IdentityScores;
-  incidents: IncidentRecord[];
+  status?: string;
+  threat_level?: number;
+  display_name?: string;
+  notes?: string;
+  estimated_age_range?: string;
+  estimated_gender?: string;
+  estimated_height_cm?: number;
+  estimated_build?: string;
+  hair_description?: string;
+  best_portrait_path?: string;
+  total_visits?: number;
+  total_incidents?: number;
+  total_confirmed_thefts?: number;
+  first_seen?: string;
+  last_seen?: string;
 }
 
 export default function OffendersPage() {
-  const [persons, setPersons] = useState<Person[]>([]);
+  const [persons, setPersons] = useState<PersonItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const [selectedPerson, setSelectedPerson] = useState<PersonItem | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -40,8 +33,12 @@ export default function OffendersPage() {
 
   const loadData = async () => {
     try {
-      const res = await api.persons.list();
-      setPersons(res.data || generateMockPersons());
+      const data = await personsApi.offenders();
+      if (Array.isArray(data) && data.length > 0) {
+        setPersons(data);
+      } else {
+        setPersons(generateMockPersons());
+      }
     } catch {
       setPersons(generateMockPersons());
     } finally {
@@ -49,83 +46,99 @@ export default function OffendersPage() {
     }
   };
 
-  const generateMockPersons = (): Person[] => {
-    const names = ['John D.', 'Unknown #142', 'Sarah M.', 'Unknown #267', 'Mike R.', 'Unknown #389', 'Emily K.', 'Unknown #412', 'David L.', 'Unknown #528', 'Chris W.', 'Unknown #601'];
-    const statuses: Person['status'][] = ['active', 'blacklisted', 'active', 'cleared', 'blacklisted', 'active'];
-    const risks: Person['riskLevel'][] = ['high', 'high', 'medium', 'low', 'high', 'medium'];
+  const generateMockPersons = (): PersonItem[] => {
+    const names = ['Unknown #142', 'Unknown #267', 'Unknown #389', 'Unknown #412', 'Unknown #528', 'Unknown #601'];
     return names.map((name, i) => ({
-      id: `person-${i + 1}`,
-      name,
-      totalIncidents: 1 + Math.floor(Math.random() * 8),
-      riskLevel: risks[i % risks.length],
-      lastSeen: new Date(Date.now() - i * 86400000 * (1 + Math.random() * 5)).toLocaleDateString(),
-      status: statuses[i % statuses.length],
-      identityScores: {
-        face: 50 + Math.floor(Math.random() * 45),
-        body: 40 + Math.floor(Math.random() * 50),
-        gait: 30 + Math.floor(Math.random() * 55),
-        height: 60 + Math.floor(Math.random() * 35),
-        marks: 20 + Math.floor(Math.random() * 60),
-      },
-      incidents: Array.from({ length: 1 + Math.floor(Math.random() * 5) }, (_, j) => ({
-        id: `inc-${i}-${j}`,
-        date: new Date(Date.now() - (j + 1) * 86400000 * (2 + Math.random() * 10)).toLocaleDateString(),
-        type: ['Theft', 'Suspicious Behavior', 'Loitering', 'Tag Removal'][j % 4],
-        camera: ['Entrance Cam 1', 'Aisle 3 Cam', 'Electronics Cam', 'Exit Cam'][j % 4],
-        value: 15 + Math.floor(Math.random() * 200),
-      })),
+      id: `mock-person-${i + 1}`,
+      display_name: name,
+      status: ['thief', 'blacklisted', 'suspected'][i % 3],
+      threat_level: [3, 4, 2, 3, 4, 2][i],
+      total_incidents: 2 + Math.floor(Math.random() * 6),
+      total_confirmed_thefts: 1 + Math.floor(Math.random() * 3),
+      total_visits: 5 + Math.floor(Math.random() * 20),
+      last_seen: new Date(Date.now() - i * 86400000 * 2).toISOString(),
+      estimated_build: ['Medium', 'Heavy', 'Slim', 'Athletic'][i % 4],
+      estimated_height_cm: 160 + Math.floor(Math.random() * 30),
+      estimated_gender: i % 2 === 0 ? 'Male' : 'Female',
+      estimated_age_range: ['20-30', '30-40', '25-35'][i % 3],
     }));
   };
 
-  const handleStatusChange = (personId: string, newStatus: Person['status']) => {
-    setPersons(prev => prev.map(p => p.id === personId ? { ...p, status: newStatus } : p));
-    if (selectedPerson?.id === personId) {
-      setSelectedPerson(prev => prev ? { ...prev, status: newStatus } : null);
+  const handleBlacklist = async (personId: string) => {
+    setActionLoading(true);
+    try {
+      await personsApi.blacklistPerson(personId, true, 'Blacklisted from offenders page');
+      setPersons(prev => prev.map(p => p.id === personId ? { ...p, status: 'blacklisted' } : p));
+      if (selectedPerson?.id === personId) {
+        setSelectedPerson(prev => prev ? { ...prev, status: 'blacklisted' } : null);
+      }
+    } catch {
+      // Optimistic
+      setPersons(prev => prev.map(p => p.id === personId ? { ...p, status: 'blacklisted' } : p));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRemoveBlacklist = async (personId: string) => {
+    setActionLoading(true);
+    try {
+      await personsApi.blacklistPerson(personId, false);
+      setPersons(prev => prev.map(p => p.id === personId ? { ...p, status: 'thief' } : p));
+      if (selectedPerson?.id === personId) {
+        setSelectedPerson(prev => prev ? { ...prev, status: 'thief' } : null);
+      }
+    } catch {
+      setPersons(prev => prev.map(p => p.id === personId ? { ...p, status: 'thief' } : p));
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const filtered = persons.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    (p.display_name || '').toLowerCase().includes(search.toLowerCase()) ||
     p.id.toLowerCase().includes(search.toLowerCase())
   );
 
-  const stats = {
-    total: persons.length,
-    newThisMonth: Math.floor(persons.length * 0.3),
-    blacklisted: persons.filter(p => p.status === 'blacklisted').length,
+  const threatConfig: Record<number, { color: string; bg: string; label: string }> = {
+    1: { color: 'text-green-400', bg: 'bg-green-500/15', label: 'LOW' },
+    2: { color: 'text-yellow-400', bg: 'bg-yellow-500/15', label: 'MEDIUM' },
+    3: { color: 'text-orange-400', bg: 'bg-orange-500/15', label: 'HIGH' },
+    4: { color: 'text-red-400', bg: 'bg-red-500/15', label: 'CRITICAL' },
   };
 
-  const riskConfig = {
-    high: { color: 'text-red-400', bg: 'bg-red-500/15' },
-    medium: { color: 'text-yellow-400', bg: 'bg-yellow-500/15' },
-    low: { color: 'text-green-400', bg: 'bg-green-500/15' },
-  };
-
-  const statusConfig = {
-    active: { color: 'text-orange-400', bg: 'bg-orange-500/15', label: 'Active Offender' },
+  const statusConfig: Record<string, { color: string; bg: string; label: string }> = {
+    thief: { color: 'text-orange-400', bg: 'bg-orange-500/15', label: 'Confirmed Thief' },
     blacklisted: { color: 'text-red-400', bg: 'bg-red-500/15', label: 'Blacklisted' },
+    suspected: { color: 'text-yellow-400', bg: 'bg-yellow-500/15', label: 'Suspected' },
+    known: { color: 'text-blue-400', bg: 'bg-blue-500/15', label: 'Known' },
+    unknown: { color: 'text-gray-400', bg: 'bg-gray-500/15', label: 'Unknown' },
     cleared: { color: 'text-green-400', bg: 'bg-green-500/15', label: 'Cleared' },
   };
 
-  const ScoreBar = ({ label, score }: { label: string; score: number }) => (
-    <div className="flex items-center gap-3">
-      <span className="text-xs text-gray-400 w-14">{label}</span>
-      <div className="flex-1 h-2 bg-[#1C1C1E] rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${
-            score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-blue-500' : score >= 40 ? 'bg-yellow-500' : 'bg-gray-500'
-          }`}
-          style={{ width: `${score}%` }}
-        />
-      </div>
-      <span className="text-xs text-gray-300 w-8 text-right">{score}%</span>
-    </div>
-  );
+  const formatDate = (iso?: string) => {
+    if (!iso) return 'N/A';
+    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const stats = {
+    total: persons.length,
+    blacklisted: persons.filter(p => p.status === 'blacklisted').length,
+    highThreat: persons.filter(p => (p.threat_level || 0) >= 3).length,
+  };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="p-8 space-y-6 max-w-[1400px] mx-auto">
+        <div><h1 className="text-3xl font-bold text-white tracking-tight">Offenders</h1></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-[#2C2C2E]/80 rounded-2xl p-5 border border-white/5 animate-pulse">
+              <div className="h-4 bg-white/10 rounded w-24 mb-3" />
+              <div className="h-8 bg-white/10 rounded w-16" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -141,7 +154,7 @@ export default function OffendersPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
           { label: 'Total Offenders', value: stats.total, icon: '👥', color: 'text-white' },
-          { label: 'New This Month', value: stats.newThisMonth, icon: '📈', color: 'text-blue-400' },
+          { label: 'High Threat', value: stats.highThreat, icon: '⚠️', color: 'text-orange-400' },
           { label: 'Blacklisted', value: stats.blacklisted, icon: '🚫', color: 'text-red-400' },
         ].map((s) => (
           <div key={s.label} className="bg-[#2C2C2E]/80 backdrop-blur-xl rounded-2xl p-5 border border-white/5">
@@ -172,8 +185,8 @@ export default function OffendersPage() {
         {/* Person Grid */}
         <div className={`grid gap-3 transition-all duration-300 ${selectedPerson ? 'grid-cols-1 sm:grid-cols-2 w-1/2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 flex-1'}`}>
           {filtered.map((person) => {
-            const risk = riskConfig[person.riskLevel];
-            const status = statusConfig[person.status];
+            const threat = threatConfig[person.threat_level || 1] || threatConfig[1];
+            const status = statusConfig[person.status || 'unknown'] || statusConfig.unknown;
             const isSelected = selectedPerson?.id === person.id;
             return (
               <button
@@ -184,22 +197,26 @@ export default function OffendersPage() {
                 }`}
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-600/50 to-gray-700/50 flex items-center justify-center border border-white/10">
-                    <span className="text-lg">👤</span>
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-600/50 to-gray-700/50 flex items-center justify-center border border-white/10 overflow-hidden">
+                    {person.best_portrait_path ? (
+                      <img src={person.best_portrait_path} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-lg">👤</span>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{person.name}</p>
-                    <p className="text-xs text-gray-500">{person.id}</p>
+                    <p className="text-sm font-semibold text-white truncate">{person.display_name || 'Unknown'}</p>
+                    <p className="text-xs text-gray-500 truncate">{person.id}</p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-400">{person.totalIncidents} incidents</span>
-                  <span className={`px-2 py-0.5 text-[10px] rounded-full font-medium ${risk.bg} ${risk.color}`}>
-                    {person.riskLevel.toUpperCase()}
+                  <span className="text-xs text-gray-400">{person.total_incidents || 0} incidents</span>
+                  <span className={`px-2 py-0.5 text-[10px] rounded-full font-medium ${threat.bg} ${threat.color}`}>
+                    {threat.label}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Last: {person.lastSeen}</span>
+                  <span className="text-xs text-gray-500">Last: {formatDate(person.last_seen)}</span>
                   <span className={`px-2 py-0.5 text-[10px] rounded-full font-medium ${status.bg} ${status.color}`}>
                     {status.label}
                   </span>
@@ -209,21 +226,26 @@ export default function OffendersPage() {
           })}
           {filtered.length === 0 && (
             <div className="col-span-full text-center py-16">
-              <p className="text-gray-500 text-sm">No persons found</p>
+              <span className="text-4xl mb-3 block">👥</span>
+              <p className="text-gray-500 text-sm">No offenders found</p>
             </div>
           )}
         </div>
 
         {/* Detail Panel */}
         {selectedPerson && (
-          <div className="w-1/2 bg-[#2C2C2E]/80 backdrop-blur-xl rounded-2xl border border-white/5 p-6 sticky top-8 self-start space-y-6 animate-in">
+          <div className="w-1/2 bg-[#2C2C2E]/80 backdrop-blur-xl rounded-2xl border border-white/5 p-6 sticky top-8 self-start space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-600/50 to-gray-700/50 flex items-center justify-center border border-white/10">
-                  <span className="text-2xl">👤</span>
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-600/50 to-gray-700/50 flex items-center justify-center border border-white/10 overflow-hidden">
+                  {selectedPerson.best_portrait_path ? (
+                    <img src={selectedPerson.best_portrait_path} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl">👤</span>
+                  )}
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">{selectedPerson.name}</h3>
+                  <h3 className="text-xl font-bold text-white">{selectedPerson.display_name || 'Unknown'}</h3>
                   <p className="text-sm text-gray-400">{selectedPerson.id}</p>
                 </div>
               </div>
@@ -235,72 +257,97 @@ export default function OffendersPage() {
               </button>
             </div>
 
-            {/* Status */}
-            <div className="flex items-center gap-3">
-              <span className={`px-3 py-1 text-xs rounded-full font-medium ${statusConfig[selectedPerson.status].bg} ${statusConfig[selectedPerson.status].color}`}>
-                {statusConfig[selectedPerson.status].label}
-              </span>
-              <span className={`px-3 py-1 text-xs rounded-full font-medium ${riskConfig[selectedPerson.riskLevel].bg} ${riskConfig[selectedPerson.riskLevel].color}`}>
-                {selectedPerson.riskLevel.toUpperCase()} RISK
-              </span>
+            {/* Status & Threat */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {selectedPerson.status && (
+                <span className={`px-3 py-1 text-xs rounded-full font-medium ${(statusConfig[selectedPerson.status] || statusConfig.unknown).bg} ${(statusConfig[selectedPerson.status] || statusConfig.unknown).color}`}>
+                  {(statusConfig[selectedPerson.status] || statusConfig.unknown).label}
+                </span>
+              )}
+              {selectedPerson.threat_level && (
+                <span className={`px-3 py-1 text-xs rounded-full font-medium ${(threatConfig[selectedPerson.threat_level] || threatConfig[1]).bg} ${(threatConfig[selectedPerson.threat_level] || threatConfig[1]).color}`}>
+                  Threat: {'🔴'.repeat(selectedPerson.threat_level)}{'⚪'.repeat(4 - selectedPerson.threat_level)}
+                </span>
+              )}
             </div>
 
-            {/* Identity Match Scores */}
-            <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">Identity Match Scores</p>
-              <div className="bg-[#1C1C1E]/60 rounded-xl p-4 space-y-3">
-                <ScoreBar label="Face" score={selectedPerson.identityScores.face} />
-                <ScoreBar label="Body" score={selectedPerson.identityScores.body} />
-                <ScoreBar label="Gait" score={selectedPerson.identityScores.gait} />
-                <ScoreBar label="Height" score={selectedPerson.identityScores.height} />
-                <ScoreBar label="Marks" score={selectedPerson.identityScores.marks} />
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-[#1C1C1E]/60 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-white">{selectedPerson.total_visits || 0}</p>
+                <p className="text-[10px] text-gray-500">Visits</p>
+              </div>
+              <div className="bg-[#1C1C1E]/60 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-white">{selectedPerson.total_incidents || 0}</p>
+                <p className="text-[10px] text-gray-500">Incidents</p>
+              </div>
+              <div className="bg-[#1C1C1E]/60 rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-red-400">{selectedPerson.total_confirmed_thefts || 0}</p>
+                <p className="text-[10px] text-gray-500">Thefts</p>
               </div>
             </div>
 
-            {/* Incidents */}
+            {/* Physical Description */}
             <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">
-                Incidents ({selectedPerson.incidents.length})
-              </p>
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                {selectedPerson.incidents.map((inc) => (
-                  <div
-                    key={inc.id}
-                    className="bg-[#1C1C1E]/60 rounded-xl p-3 flex items-center justify-between hover:bg-[#3A3A3C]/40 transition-all duration-200"
-                  >
-                    <div>
-                      <p className="text-sm text-white font-medium">{inc.type}</p>
-                      <p className="text-xs text-gray-500">{inc.date} • {inc.camera}</p>
-                    </div>
-                    <span className="text-sm text-red-400 font-medium">${inc.value}</span>
-                  </div>
-                ))}
+              <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">Physical Description</p>
+              <div className="bg-[#1C1C1E]/60 rounded-xl p-4 space-y-2 text-sm">
+                {selectedPerson.estimated_gender && (
+                  <div className="flex justify-between"><span className="text-gray-500">Gender</span><span className="text-white/70">{selectedPerson.estimated_gender}</span></div>
+                )}
+                {selectedPerson.estimated_age_range && (
+                  <div className="flex justify-between"><span className="text-gray-500">Age Range</span><span className="text-white/70">{selectedPerson.estimated_age_range}</span></div>
+                )}
+                {selectedPerson.estimated_height_cm && (
+                  <div className="flex justify-between"><span className="text-gray-500">Height</span><span className="text-white/70">~{Math.round(selectedPerson.estimated_height_cm)}cm</span></div>
+                )}
+                {selectedPerson.estimated_build && (
+                  <div className="flex justify-between"><span className="text-gray-500">Build</span><span className="text-white/70">{selectedPerson.estimated_build}</span></div>
+                )}
+                {selectedPerson.hair_description && (
+                  <div className="flex justify-between"><span className="text-gray-500">Hair</span><span className="text-white/70">{selectedPerson.hair_description}</span></div>
+                )}
+                {!selectedPerson.estimated_gender && !selectedPerson.estimated_build && (
+                  <p className="text-gray-500 text-xs">No physical description available</p>
+                )}
               </div>
             </div>
+
+            {/* Timeline */}
+            <div>
+              <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">Timeline</p>
+              <div className="bg-[#1C1C1E]/60 rounded-xl p-4 space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-gray-500">First Seen</span><span className="text-white/70">{formatDate(selectedPerson.first_seen)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Last Seen</span><span className="text-white/70">{formatDate(selectedPerson.last_seen)}</span></div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            {selectedPerson.notes && (
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">Notes</p>
+                <div className="bg-[#1C1C1E]/60 rounded-xl p-4">
+                  <p className="text-sm text-white/70 whitespace-pre-wrap">{selectedPerson.notes}</p>
+                </div>
+              </div>
+            )}
 
             {/* Actions */}
             <div className="flex gap-3 pt-2">
               {selectedPerson.status !== 'blacklisted' ? (
                 <button
-                  onClick={() => handleStatusChange(selectedPerson.id, 'blacklisted')}
-                  className="flex-1 px-4 py-2.5 bg-red-500/10 text-red-400 text-sm font-medium rounded-xl hover:bg-red-500/20 transition-all duration-200 active:scale-95"
+                  onClick={() => handleBlacklist(selectedPerson.id)}
+                  disabled={actionLoading}
+                  className="flex-1 px-4 py-2.5 bg-red-500/10 text-red-400 text-sm font-medium rounded-xl hover:bg-red-500/20 transition-all duration-200 active:scale-95 disabled:opacity-50"
                 >
-                  🚫 Blacklist
+                  {actionLoading ? 'Processing...' : '🚫 Blacklist'}
                 </button>
               ) : (
                 <button
-                  onClick={() => handleStatusChange(selectedPerson.id, 'cleared')}
-                  className="flex-1 px-4 py-2.5 bg-green-500/10 text-green-400 text-sm font-medium rounded-xl hover:bg-green-500/20 transition-all duration-200 active:scale-95"
+                  onClick={() => handleRemoveBlacklist(selectedPerson.id)}
+                  disabled={actionLoading}
+                  className="flex-1 px-4 py-2.5 bg-green-500/10 text-green-400 text-sm font-medium rounded-xl hover:bg-green-500/20 transition-all duration-200 active:scale-95 disabled:opacity-50"
                 >
-                  ✅ Remove from Blacklist
-                </button>
-              )}
-              {selectedPerson.status !== 'cleared' && (
-                <button
-                  onClick={() => handleStatusChange(selectedPerson.id, 'cleared')}
-                  className="flex-1 px-4 py-2.5 bg-[#3A3A3C] text-white text-sm font-medium rounded-xl hover:bg-[#48484A] transition-all duration-200 active:scale-95"
-                >
-                  Clear
+                  {actionLoading ? 'Processing...' : '✅ Remove from Blacklist'}
                 </button>
               )}
             </div>
