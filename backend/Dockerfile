@@ -30,4 +30,4 @@ RUN mkdir -p static/clips
 EXPOSE 8000
 
 # Run with gunicorn + uvicorn workers
-CMD ["gunicorn", "app.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--timeout", "120"]
+CMD ["gunicorn", "app.main:app", "-w", "2", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--timeout", "120", "--preload"]

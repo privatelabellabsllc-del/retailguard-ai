@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text, inspect
@@ -11,39 +12,55 @@ from app.models import *  # noqa
 
 
 def init_db():
-    """Initialize database tables, handling conflicts with existing schema."""
-    inspector = inspect(engine)
-    existing = inspector.get_table_names()
+    """Initialize database tables with advisory lock to prevent race conditions."""
+    with engine.connect() as conn:
+        # Acquire PostgreSQL advisory lock to ensure only one worker inits the DB
+        conn.execute(text("SELECT pg_advisory_lock(12345)"))
+        try:
+            inspector = inspect(conn)
+            existing = inspector.get_table_names()
 
-    # Check if we need a fresh start (new V2 tables missing)
-    v2_tables = ["traffic_counts", "shifts", "cash_sessions", "shelves", "heatmap_data"]
-    needs_v2 = not any(t in existing for t in v2_tables)
+            # Check if V2 tables exist
+            v2_tables = ["traffic_counts", "shifts", "cash_sessions", "shelves", "heatmap_data"]
+            has_v2 = any(t in existing for t in v2_tables)
 
-    if needs_v2 and existing:
-        # Drop all tables and recreate to avoid FK type mismatches
-        print("V2 upgrade detected — recreating all tables...")
-        Base.metadata.drop_all(bind=engine)
+            if existing and not has_v2:
+                # V2 upgrade — drop all and recreate
+                print("V2 upgrade: dropping old tables and recreating all...")
+                Base.metadata.drop_all(bind=engine)
+                conn.commit()
 
-    Base.metadata.create_all(bind=engine)
-    print(f"Database initialized with {len(Base.metadata.tables)} tables")
+            Base.metadata.create_all(bind=engine)
+            conn.commit()
+            print(f"Database initialized with {len(Base.metadata.tables)} tables")
+        except Exception as e:
+            print(f"DB init error (will retry): {e}")
+            conn.rollback()
+            try:
+                Base.metadata.drop_all(bind=engine)
+                conn.commit()
+                Base.metadata.create_all(bind=engine)
+                conn.commit()
+                print("Database recreated from scratch")
+            except Exception as e2:
+                print(f"DB retry also failed: {e2}")
+                conn.rollback()
+        finally:
+            conn.execute(text("SELECT pg_advisory_unlock(12345)"))
+            conn.commit()
 
 
-try:
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     init_db()
-except Exception as e:
-    print(f"DB init error: {e}")
-    # Last resort — drop everything and recreate
-    try:
-        Base.metadata.drop_all(bind=engine)
-        Base.metadata.create_all(bind=engine)
-        print("Database recreated from scratch")
-    except Exception as e2:
-        print(f"FATAL DB error: {e2}")
+    yield
+
 
 app = FastAPI(
     title="RetailGuard AI",
     description="AI-Powered Retail Intelligence & Security Platform",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # CORS
