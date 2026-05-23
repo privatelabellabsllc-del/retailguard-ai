@@ -58,7 +58,10 @@ app.include_router(permissions.router)
 
 @app.on_event("startup")
 def startup():
-    """Initialize database tables on startup."""
+    """Initialize database tables and seed admin on startup."""
+    from passlib.context import CryptContext
+    from app.database import SessionLocal
+
     try:
         inspector = inspect(engine)
         existing = inspector.get_table_names()
@@ -77,6 +80,27 @@ def startup():
             print("DB recreated from scratch")
         except Exception as e2:
             print(f"DB fatal: {e2}")
+
+    # Seed default admin user
+    try:
+        db = SessionLocal()
+        admin = db.query(User).filter(User.username == "admin").first()
+        if not admin:
+            pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+            admin = User(
+                username="admin",
+                hashed_password=pwd.hash("admin123"),
+                email="admin@retailguard.ai",
+                full_name="System Admin",
+                role="owner",
+                is_active=True,
+            )
+            db.add(admin)
+            db.commit()
+            print("Default admin user created (admin / admin123)")
+        db.close()
+    except Exception as e:
+        print(f"Admin seed error: {e}")
 
 
 @app.get("/")
