@@ -68,7 +68,12 @@ api.interceptors.response.use(
 
 export const auth = {
   login: async (payload: LoginPayload): Promise<AuthResponse> => {
-    const { data } = await api.post<AuthResponse>('/api/auth/login', payload);
+    const formData = new URLSearchParams();
+    formData.append('username', payload.username);
+    formData.append('password', payload.password);
+    const { data } = await api.post<AuthResponse>('/api/auth/login', formData, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
     localStorage.setItem('access_token', data.access_token);
     localStorage.setItem('user', JSON.stringify(data.user));
     return data;
