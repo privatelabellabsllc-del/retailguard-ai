@@ -1,187 +1,367 @@
-import { NavLink } from 'react-router-dom';
-import { useState, useEffect, useCallback } from 'react';
-import {
-  Shield, LayoutDashboard, ClipboardCheck, Bell, Users,
-  Ban, Camera, LogOut, AlertTriangle, Menu, X
-} from 'lucide-react';
-import AlertPanel from './AlertPanel';
-import { createAlertWebSocket } from '../services/api';
-import type { User, Alert } from '../types';
+// ──────────────────────────────────────────────
+// RetailGuard AI — Apple OS Style Layout
+// ──────────────────────────────────────────────
 
-interface LayoutProps {
-  user: User;
-  onLogout: () => void;
-  children: React.ReactNode;
+import { useState, useMemo } from 'react';
+import { Link, useLocation, Outlet } from 'react-router-dom';
+import type { User } from '../types';
+
+// ─── Navigation Config ───────────────────────
+
+interface NavItem {
+  label: string;
+  path: string;
+  icon: string;
+  featureKey?: string;
 }
 
-export default function Layout({ user, onLogout, children }: LayoutProps) {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [activeAlert, setActiveAlert] = useState<Alert | null>(null);
-  const [showMobileNav, setShowMobileNav] = useState(false);
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
 
-  // WebSocket connection for real-time alerts
-  useEffect(() => {
-    let ws: WebSocket;
-    let reconnectTimer: any;
+const navSections: NavSection[] = [
+  {
+    title: 'SECURITY',
+    items: [
+      { label: 'Dashboard', path: '/', icon: '🏠' },
+      { label: 'Review Queue', path: '/incidents', icon: '🔍', featureKey: 'incidents' },
+      { label: 'Alerts', path: '/alerts', icon: '🔔', featureKey: 'alerts' },
+      { label: 'Offenders', path: '/persons', icon: '👤', featureKey: 'persons' },
+      { label: 'Blacklist', path: '/blacklist', icon: '🚫', featureKey: 'blacklist' },
+    ],
+  },
+  {
+    title: 'INTELLIGENCE',
+    items: [
+      { label: 'Traffic', path: '/traffic', icon: '📊', featureKey: 'traffic' },
+      { label: 'Calendar', path: '/calendar', icon: '📅', featureKey: 'calendar' },
+      { label: 'Heatmap', path: '/heatmap', icon: '🗺️', featureKey: 'heatmap' },
+      { label: 'Shelves', path: '/shelves', icon: '🗄️', featureKey: 'shelves' },
+      { label: 'Fridge', path: '/fridge', icon: '❄️', featureKey: 'fridge' },
+    ],
+  },
+  {
+    title: 'OPERATIONS',
+    items: [
+      { label: 'Team', path: '/team', icon: '👥', featureKey: 'team' },
+      { label: 'Cash Management', path: '/cash', icon: '💰', featureKey: 'cash' },
+      { label: 'Store Scanner', path: '/scanner', icon: '📱', featureKey: 'scanner' },
+    ],
+  },
+  {
+    title: 'ANALYTICS',
+    items: [
+      { label: 'Revenue', path: '/revenue', icon: '💵', featureKey: 'revenue' },
+      { label: 'Projections', path: '/projections', icon: '📈', featureKey: 'projections' },
+      { label: 'Reports', path: '/reports', icon: '📋', featureKey: 'reports' },
+    ],
+  },
+  {
+    title: 'SYSTEM',
+    items: [
+      { label: 'Cameras', path: '/cameras', icon: '📹', featureKey: 'cameras' },
+      { label: 'Settings', path: '/settings', icon: '⚙️' },
+    ],
+  },
+];
 
-    const connect = () => {
-      try {
-        ws = createAlertWebSocket();
-        ws.onmessage = (event) => {
-          const data = JSON.parse(event.data);
-          if (data.type === 'new_alert') {
-            const newAlert = data.alert as Alert;
-            setAlerts((prev) => [newAlert, ...prev]);
-            setActiveAlert(newAlert);
+// ─── Helpers ─────────────────────────────────
 
-            // Play alert sound
-            try {
-              const audio = new Audio('/alert-sound.mp3');
-              audio.play().catch(() => {});
-            } catch {}
-          } else if (data.type === 'alert_resolved') {
-            setAlerts((prev) => prev.filter((a) => a.id !== data.alert_id));
-            if (activeAlert?.id === data.alert_id) {
-              setActiveAlert(null);
-            }
-          }
-        };
-        ws.onclose = () => {
-          reconnectTimer = setTimeout(connect, 3000);
-        };
-      } catch {}
-    };
+function getUser(): User | null {
+  try {
+    const raw = localStorage.getItem('user');
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+}
 
-    connect();
-    return () => {
-      ws?.close();
-      clearTimeout(reconnectTimer);
-    };
-  }, []);
+function hasFeature(user: User | null, featureKey?: string): boolean {
+  if (!featureKey) return true; // No restriction
+  if (!user) return false;
+  if (user.role === 'admin') return true; // Admins see everything
+  return user.features?.[featureKey] !== false; // Default allow unless explicitly false
+}
 
-  const navItems = [
-    { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/review', icon: ClipboardCheck, label: 'Review Queue' },
-    { to: '/alerts', icon: Bell, label: 'Alerts', badge: alerts.length },
-    { to: '/offenders', icon: Users, label: 'Offenders' },
-    { to: '/blacklist', icon: Ban, label: 'Blacklist' },
-    { to: '/cameras', icon: Camera, label: 'Cameras' },
-  ];
+function getPageTitle(pathname: string): string {
+  for (const section of navSections) {
+    for (const item of section.items) {
+      if (item.path === pathname) return item.label;
+    }
+  }
+  return 'Dashboard';
+}
+
+function getRoleBadgeColor(role: string): string {
+  const colors: Record<string, string> = {
+    admin: 'bg-purple-500/20 text-purple-300',
+    manager: 'bg-blue-500/20 text-blue-300',
+    supervisor: 'bg-cyan-500/20 text-cyan-300',
+    security: 'bg-red-500/20 text-red-300',
+    cashier: 'bg-amber-500/20 text-amber-300',
+    viewer: 'bg-gray-500/20 text-gray-400',
+  };
+  return colors[role] || colors.viewer;
+}
+
+// ─── Layout Component ────────────────────────
+
+export default function Layout() {
+  const location = useLocation();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const user = useMemo(() => getUser(), []);
+
+  const filteredSections = useMemo(() => {
+    return navSections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) => hasFeature(user, item.featureKey)),
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [user]);
+
+  const pageTitle = getPageTitle(location.pathname);
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
-      <aside className={`${showMobileNav ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-gray-900 border-r border-gray-800 flex flex-col transition-transform`}>
-        {/* Logo */}
-        <div className="p-6 border-b border-gray-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
+    <div
+      className="flex h-screen w-screen overflow-hidden"
+      style={{
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+        background: '#000000',
+      }}
+    >
+      {/* ── Sidebar ──────────────────────────── */}
+      <aside
+        className={`
+          relative flex flex-col shrink-0
+          transition-all duration-300 ease-in-out
+          ${sidebarCollapsed ? 'w-[68px]' : 'w-[250px]'}
+        `}
+        style={{
+          background: 'rgba(28, 28, 30, 0.80)',
+          backdropFilter: 'blur(40px)',
+          WebkitBackdropFilter: 'blur(40px)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+        }}
+      >
+        {/* Logo Area */}
+        <div className="flex items-center gap-3 px-5 py-5 shrink-0">
+          {/* AI Pulse Dot */}
+          <div className="relative shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
+              <span className="text-white text-xs font-bold">R</span>
             </div>
-            <div>
-              <h1 className="font-bold text-lg text-white">RetailGuard</h1>
-              <span className="text-xs text-blue-400">AI Security Platform</span>
+            <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-[#1C1C1E]">
+              <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-40" />
             </div>
           </div>
+          {!sidebarCollapsed && (
+            <div className="overflow-hidden">
+              <div className="text-[13px] font-semibold text-white tracking-tight leading-tight">
+                RetailGuard
+              </div>
+              <div className="text-[10px] text-green-400 font-medium tracking-wide">
+                AI Active
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Collapse Toggle */}
+        <button
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="
+            absolute top-5 -right-3 z-10
+            w-6 h-6 rounded-full
+            bg-[#2C2C2E] border border-white/10
+            flex items-center justify-center
+            text-white/50 hover:text-white hover:bg-[#3A3A3C]
+            transition-all duration-200
+            opacity-0 hover:opacity-100 group-hover:opacity-100
+          "
+          style={{ fontSize: '10px' }}
+        >
+          {sidebarCollapsed ? '›' : '‹'}
+        </button>
+
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={() => setShowMobileNav(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-blue-600/20 text-blue-400'
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-                }`
-              }
-            >
-              <item.icon className="w-5 h-5" />
-              {item.label}
-              {item.badge ? (
-                <span className="ml-auto bg-red-600 text-white text-xs px-2 py-0.5 rounded-full">
-                  {item.badge}
-                </span>
-              ) : null}
-            </NavLink>
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 scrollbar-thin">
+          {filteredSections.map((section) => (
+            <div key={section.title} className="mb-4">
+              {!sidebarCollapsed && (
+                <div className="px-2 mb-1.5 text-[10px] font-semibold text-white/30 tracking-widest uppercase">
+                  {section.title}
+                </div>
+              )}
+
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const isActive =
+                    item.path === '/'
+                      ? location.pathname === '/'
+                      : location.pathname.startsWith(item.path);
+
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`
+                        group relative flex items-center gap-2.5 rounded-lg
+                        transition-all duration-200 ease-in-out
+                        ${sidebarCollapsed ? 'justify-center px-2 py-2' : 'px-2.5 py-[7px]'}
+                        ${
+                          isActive
+                            ? 'bg-white/10 text-white'
+                            : 'text-white/50 hover:bg-white/[0.06] hover:text-white/80'
+                        }
+                      `}
+                    >
+                      {/* Active indicator bar */}
+                      {isActive && (
+                        <div
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-blue-400"
+                          style={{
+                            transition: 'all 200ms ease',
+                          }}
+                        />
+                      )}
+
+                      <span className="text-[15px] shrink-0 leading-none">{item.icon}</span>
+
+                      {!sidebarCollapsed && (
+                        <span className="text-[13px] font-medium truncate">{item.label}</span>
+                      )}
+
+                      {/* Tooltip for collapsed state */}
+                      {sidebarCollapsed && (
+                        <div
+                          className="
+                            absolute left-full ml-2 px-2.5 py-1.5 rounded-lg
+                            bg-[#2C2C2E] border border-white/10
+                            text-[12px] text-white font-medium whitespace-nowrap
+                            opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                            transition-all duration-150 z-50
+                            pointer-events-none
+                          "
+                          style={{
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+                          }}
+                        >
+                          {item.label}
+                        </div>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           ))}
         </nav>
 
-        {/* User */}
-        <div className="p-4 border-t border-gray-800">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center text-sm font-medium">
-              {user.full_name?.[0] || user.username[0].toUpperCase()}
+        {/* User Section at Bottom */}
+        {user && !sidebarCollapsed && (
+          <div
+            className="shrink-0 px-4 py-3 border-t border-white/[0.06]"
+          >
+            <div className="flex items-center gap-2.5">
+              {user.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt={user.name}
+                  className="w-7 h-7 rounded-full object-cover ring-1 ring-white/10"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                  <span className="text-[11px] font-semibold text-white">
+                    {user.name?.charAt(0)?.toUpperCase() || '?'}
+                  </span>
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-[12px] font-medium text-white/80 truncate">
+                  {user.name}
+                </div>
+                <div className="text-[10px] text-white/30 capitalize">{user.role}</div>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-200 truncate">
-                {user.full_name || user.username}
-              </p>
-              <p className="text-xs text-gray-500 capitalize">{user.role}</p>
-            </div>
-            <button onClick={onLogout} className="text-gray-500 hover:text-gray-300">
-              <LogOut className="w-4 h-4" />
-            </button>
           </div>
-        </div>
+        )}
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="h-14 border-b border-gray-800 flex items-center px-6 shrink-0">
-          <button
-            onClick={() => setShowMobileNav(!showMobileNav)}
-            className="lg:hidden mr-4 text-gray-400"
-          >
-            {showMobileNav ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+      {/* ── Main Content Area ────────────────── */}
+      <main className="flex-1 flex flex-col min-w-0 bg-[#000000]">
+        {/* Top Bar */}
+        <header
+          className="
+            shrink-0 flex items-center justify-between
+            px-8 h-[56px]
+            border-b border-white/[0.06]
+          "
+          style={{
+            background: 'rgba(0, 0, 0, 0.60)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+          }}
+        >
+          {/* Page Title */}
+          <h1 className="text-[20px] font-semibold text-white tracking-tight">
+            {pageTitle}
+          </h1>
 
-          <div className="flex-1" />
-
-          {/* Active alerts indicator */}
-          {alerts.length > 0 && (
+          {/* Right side */}
+          <div className="flex items-center gap-4">
+            {/* Notification Indicator */}
             <button
-              onClick={() => setActiveAlert(alerts[0])}
-              className="flex items-center gap-2 bg-red-600/20 text-red-400 px-3 py-1.5 rounded-lg animate-pulse-alert"
+              className="
+                relative w-8 h-8 rounded-full
+                bg-white/[0.06] hover:bg-white/[0.10]
+                flex items-center justify-center
+                transition-all duration-200
+              "
             >
-              <AlertTriangle className="w-4 h-4" />
-              <span className="text-sm font-medium">
-                {alerts.length} Active Alert{alerts.length > 1 ? 's' : ''}
-              </span>
+              <span className="text-[14px]">🔔</span>
+              <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
             </button>
-          )}
+
+            {/* User Info */}
+            {user && (
+              <div className="flex items-center gap-3">
+                <span
+                  className={`
+                    px-2.5 py-1 rounded-full text-[11px] font-medium capitalize
+                    ${getRoleBadgeColor(user.role)}
+                  `}
+                >
+                  {user.role}
+                </span>
+
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.name}
+                    className="w-8 h-8 rounded-full object-cover ring-2 ring-white/10 hover:ring-white/20 transition-all duration-200 cursor-pointer"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center ring-2 ring-white/10 hover:ring-white/20 transition-all duration-200 cursor-pointer">
+                    <span className="text-[12px] font-semibold text-white">
+                      {user.name?.charAt(0)?.toUpperCase() || '?'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </header>
 
-        {/* Page content */}
-        <div className="flex-1 overflow-auto p-6">
-          {children}
+        {/* Page Content */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="p-8">
+            <Outlet />
+          </div>
         </div>
       </main>
-
-      {/* Alert side panel */}
-      {activeAlert && (
-        <AlertPanel
-          alert={activeAlert}
-          onClose={() => setActiveAlert(null)}
-          onAction={() => {
-            setAlerts((prev) => prev.filter((a) => a.id !== activeAlert.id));
-            setActiveAlert(null);
-          }}
-        />
-      )}
-
-      {/* Mobile overlay */}
-      {showMobileNav && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-30"
-          onClick={() => setShowMobileNav(false)}
-        />
-      )}
     </div>
   );
 }
