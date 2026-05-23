@@ -3,11 +3,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text, inspect
 from app.config import settings
 from app.database import engine, Base
-from app.api import auth, incidents, alerts, persons, cameras
-from app.api import traffic, team, cash, shelves, analytics, permissions
 
 # Import all models so they register with Base.metadata
-from app.models import *  # noqa
+# Must be before API imports to avoid circular deps, but use explicit imports
+# to avoid name shadowing
+from app.models.user import User  # noqa
+from app.models.person import Person  # noqa
+from app.models.incident import Incident  # noqa
+from app.models.alert import Alert  # noqa
+from app.models.camera import Camera  # noqa
+from app.models.location import Location  # noqa
+from app.models.traffic import TrafficCount, TrafficVisitor  # noqa
+from app.models.team import Shift, PerformanceMetric, PerformanceReview, ReviewTemplate  # noqa
+from app.models.shelf import Shelf, ShelfProduct, Product, OutOfStockAlert, StoreScan  # noqa
+from app.models.cash import CashSession, CashTransaction, CashAlert  # noqa
+from app.models.analytics import HeatmapData, FridgeDoorEvent, RevenueRecord, DailyAnalytics  # noqa
+from app.models.permissions import FeaturePermission, RoleTemplate  # noqa
+
+# Now import API routers (no name shadowing)
+from app.api import auth, incidents, alerts, persons, cameras
+from app.api import traffic, team, cash, shelves, analytics, permissions
 
 app = FastAPI(
     title="RetailGuard AI",
