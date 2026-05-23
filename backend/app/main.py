@@ -1,12 +1,25 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 from app.config import settings
 from app.database import engine, Base
 from app.api import auth, incidents, alerts, persons, cameras
 from app.api import traffic, team, cash, shelves, analytics, permissions
 
-# Create all tables
-Base.metadata.create_all(bind=engine)
+# Import all models so they register with Base.metadata
+from app.models import *  # noqa
+
+# Create tables - handle gracefully if some already exist with different types
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"Warning: create_all had issues (may be expected for existing tables): {e}")
+    # Try creating tables one by one
+    for table in Base.metadata.sorted_tables:
+        try:
+            table.create(bind=engine, checkfirst=True)
+        except Exception as te:
+            print(f"  Skipping table {table.name}: {te}")
 
 app = FastAPI(
     title="RetailGuard AI",
