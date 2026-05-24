@@ -206,6 +206,7 @@ const navSections: NavSection[] = [
     collapsible: false,
     items: [
       { label: 'Dashboard', path: '/dashboard', icon: 'home' },
+      { label: 'Live Monitor', path: '/monitor', icon: 'camera', featureKey: 'cameras' },
       { label: 'Review Queue', path: '/incidents', icon: 'search', featureKey: 'incidents' },
       { label: 'Alerts', path: '/alerts', icon: 'bell', featureKey: 'alerts' },
       { label: 'Offenders', path: '/persons', icon: 'user', featureKey: 'persons' },

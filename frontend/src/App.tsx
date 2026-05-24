@@ -21,6 +21,7 @@ const RevenuePage = React.lazy(() => import('./pages/RevenuePage'));
 const CamerasPage = React.lazy(() => import('./pages/CamerasPage'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 const PersonDetailPage = React.lazy(() => import('./pages/PersonDetailPage'));
+const LiveMonitorPage = React.lazy(() => import('./pages/LiveMonitorPage'));
 
 // Auth guard component
 const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -60,6 +61,7 @@ const App: React.FC = () => {
             }
           >
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/monitor" element={<LiveMonitorPage />} />
             <Route path="/incidents" element={<ReviewQueuePage />} />
             <Route path="/review" element={<ReviewQueuePage />} />
             <Route path="/alerts" element={<AlertsPage />} />

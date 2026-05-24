@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { incidents as incidentsApi, alerts as alertsApi, streams as streamsApi } from '../services/api';
 
 interface StatCard {
@@ -148,6 +149,7 @@ const HourlyTrafficChart = () => {
 };
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<StatCard[]>([
     { title: 'Total Incidents', value: 0, icon: 'search', trend: 0 },
     { title: 'Pending Review', value: 0, icon: 'clock', trend: 0 },
@@ -240,6 +242,37 @@ export default function DashboardPage() {
           <StatCardComponent key={i} card={card} />
         ))}
       </div>
+
+      {/* Live Monitor Quick Access */}
+      <button
+        onClick={() => navigate('/monitor')}
+        className="w-full bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-5 md:p-6 text-left transition-all hover:shadow-xl hover:shadow-gray-900/20 group relative overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-red-500/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-lg group-hover:text-blue-200 transition-colors">Live Camera Monitor</h3>
+              <p className="text-gray-400 text-sm mt-0.5">Real-time feeds with AI offender tracking · Click to add/remove cameras</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold px-3 py-1.5 rounded-full">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              LIVE
+            </div>
+            <svg className="w-5 h-5 text-gray-500 group-hover:text-white group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </div>
+        </div>
+      </button>
 
       {/* Traffic + Active Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
