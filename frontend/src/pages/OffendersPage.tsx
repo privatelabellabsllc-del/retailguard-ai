@@ -142,9 +142,9 @@ export default function OffendersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-6 lg:p-8 space-y-8">
-        <div className="bg-gradient-to-br from-orange-500/10 via-red-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
-          <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Offenders</h1>
+      <div className="min-h-screen p-4 md:p-6 lg:p-8 space-y-8">
+        <div className="bg-gradient-to-br from-orange-500/10 via-red-500/5 to-transparent border border-gray-200/50 rounded-2xl p-5 md:p-8 lg:p-10">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Offenders</h1>
           <p className="text-base text-[#86868B] leading-relaxed">Known offenders identified by the AI system. Each profile includes facial recognition data, incident history, and threat assessment.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -160,10 +160,10 @@ export default function OffendersPage() {
   }
 
   return (
-    <div className="min-h-screen p-6 lg:p-8 space-y-8">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-orange-500/10 via-red-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
-        <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Offenders</h1>
+      <div className="bg-gradient-to-br from-orange-500/10 via-red-500/5 to-transparent border border-gray-200/50 rounded-2xl p-6 md:p-8 lg:p-10">
+        <h1 className="text-2xl md:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Offenders</h1>
         <p className="text-base text-[#86868B] leading-relaxed">Known offenders identified by the AI system. Each profile includes facial recognition data, incident history, and threat assessment.</p>
       </div>
 
@@ -218,9 +218,9 @@ export default function OffendersPage() {
         />
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Person Grid */}
-        <div className={`grid gap-3 transition-all duration-300 ${selectedPerson ? 'grid-cols-1 sm:grid-cols-2 w-1/2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 flex-1'}`}>
+        <div className={`grid gap-3 transition-all duration-300 ${selectedPerson ? 'grid-cols-1 sm:grid-cols-2 w-full lg:w-1/2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 flex-1'}`}>
           {filtered.map((person) => {
             const threat = threatConfig[person.threat_level || 1] || threatConfig[1];
             const status = statusConfig[person.status || 'unknown'] || statusConfig.unknown;
@@ -275,7 +275,7 @@ export default function OffendersPage() {
 
         {/* Detail Panel */}
         {selectedPerson && (
-          <div className="w-1/2 bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/50 p-6 sticky top-8 self-start space-y-6">
+          <div className="w-full lg:w-1/2 bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/50 p-4 md:p-6 sticky top-8 self-start space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center border border-gray-200/50 overflow-hidden">

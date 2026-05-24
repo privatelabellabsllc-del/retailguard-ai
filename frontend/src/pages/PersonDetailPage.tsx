@@ -33,7 +33,7 @@ export default function PersonDetailPage() {
   }, [id]);
 
   if (loading || !person) return (
-    <div className="min-h-screen p-6 lg:p-8 flex items-center justify-center">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 flex items-center justify-center">
       <p className="text-[#86868B] text-sm">Loading...</p>
     </div>
   );
@@ -63,7 +63,7 @@ export default function PersonDetailPage() {
   };
 
   return (
-    <div className="min-h-screen p-6 lg:p-8 space-y-8">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 space-y-8">
       {/* Back Button */}
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#86868B] hover:text-gray-900 text-sm transition-colors duration-200">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -73,9 +73,9 @@ export default function PersonDetailPage() {
       </button>
 
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-orange-500/10 via-amber-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
-        <div className="flex gap-6">
-          <div className="w-28 h-28 bg-white/80 border border-gray-200/50 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden">
+      <div className="bg-gradient-to-br from-orange-500/10 via-amber-500/5 to-transparent border border-gray-200/50 rounded-2xl p-5 md:p-8 lg:p-10">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+          <div className="w-20 h-20 md:w-28 md:h-28 bg-white/80 border border-gray-200/50 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden">
             {person.best_portrait_path ? (
               <img src={person.best_portrait_path} alt="" className="w-full h-full rounded-2xl object-cover" />
             ) : (
@@ -86,7 +86,7 @@ export default function PersonDetailPage() {
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3">
-              <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight">{person.display_name || 'Unknown Individual'}</h1>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight">{person.display_name || 'Unknown Individual'}</h1>
               <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${config.bg} ${config.text}`}>{config.label}</span>
             </div>
             <p className="text-base text-[#86868B] leading-relaxed">Full identity profile with facial recognition data, incident history, and AI-powered threat assessment.</p>

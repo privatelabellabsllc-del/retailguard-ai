@@ -95,12 +95,12 @@ export default function HeatmapPage() {
   }, [fridges]);
 
   return (
-    <div className="min-h-screen p-6 lg:p-8 space-y-8">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 space-y-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-cyan-500/10 via-teal-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
+      <div className="bg-gradient-to-br from-cyan-500/10 via-teal-500/5 to-transparent border border-gray-200/50 rounded-2xl p-5 md:p-8 lg:p-10">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Traffic Heatmap</h1>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Traffic Heatmap</h1>
             <p className="text-base text-[#86868B] leading-relaxed">Visual traffic heatmaps showing where customers spend the most time. Optimize store layout and product placement with AI insights.</p>
           </div>
           <button
@@ -180,7 +180,7 @@ export default function HeatmapPage() {
             <span>High</span>
           </div>
         </div>
-        <div className="grid grid-cols-10 gap-1 aspect-[2/1] max-w-3xl mx-auto">
+        <div className="overflow-x-auto"><div className="grid grid-cols-10 gap-1 aspect-[2/1] max-w-3xl mx-auto min-w-[400px]">
           {heatmapData.map((row, r) =>
             row.map((val, c) => (
               <div
@@ -194,6 +194,7 @@ export default function HeatmapPage() {
               </div>
             ))
           )}
+        </div>
         </div>
       </div>
 

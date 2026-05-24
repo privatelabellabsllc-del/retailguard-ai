@@ -90,12 +90,12 @@ const BlacklistPage: React.FC = () => {
   const totalThefts = persons.reduce((sum, p) => sum + (p.total_confirmed_thefts || 0), 0);
 
   return (
-    <div className="min-h-screen p-6 lg:p-8 space-y-8">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 space-y-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-red-500/10 via-rose-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
+      <div className="bg-gradient-to-br from-red-500/10 via-rose-500/5 to-transparent border border-gray-200/50 rounded-2xl p-5 md:p-8 lg:p-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Blacklist</h1>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Blacklist</h1>
             <p className="text-base text-[#86868B] leading-relaxed">Permanently banned individuals. AI auto-detects these people the moment they enter your store and triggers an immediate alert.</p>
           </div>
           <button

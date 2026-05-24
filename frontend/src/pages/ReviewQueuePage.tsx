@@ -183,9 +183,9 @@ export default function ReviewQueuePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen p-6 lg:p-8 space-y-8">
+      <div className="min-h-screen p-4 md:p-6 lg:p-8 space-y-8">
         {/* Hero skeleton */}
-        <div className="bg-gradient-to-br from-red-500/10 via-orange-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
+        <div className="bg-gradient-to-br from-red-500/10 via-orange-500/5 to-transparent border border-gray-200/50 rounded-2xl p-5 md:p-8 lg:p-10">
           <div className="h-9 bg-gray-200/60 rounded-lg w-48 mb-3 animate-pulse" />
           <div className="h-5 bg-gray-200/40 rounded-lg w-80 animate-pulse" />
         </div>
@@ -210,10 +210,10 @@ export default function ReviewQueuePage() {
   }
 
   return (
-    <div className="min-h-screen p-6 lg:p-8 space-y-8">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 space-y-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-red-500/10 via-orange-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
-        <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Review Queue</h1>
+      <div className="bg-gradient-to-br from-red-500/10 via-orange-500/5 to-transparent border border-gray-200/50 rounded-2xl p-5 md:p-8 lg:p-10">
+        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Review Queue</h1>
         <p className="text-base text-[#86868B] leading-relaxed">AI-detected concealment incidents awaiting your review. Confirm or dismiss each clip to keep your store safe.</p>
       </div>
 
@@ -255,7 +255,7 @@ export default function ReviewQueuePage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-1 bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-xl p-1 w-fit max-w-full overflow-x-auto">
         {([
           { key: 'all', label: 'All' },
           { key: 'pending_review', label: 'Pending' },
@@ -289,9 +289,9 @@ export default function ReviewQueuePage() {
               className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl overflow-hidden transition-all duration-200 hover:border-[#48484A]/60 hover:shadow-sm hover:shadow-black/10"
             >
               <div className="p-5 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : inc.id)}>
-                <div className="flex gap-5">
+                <div className="flex flex-col md:flex-row gap-4 md:gap-5">
                   {/* Video thumbnail placeholder */}
-                  <div className="w-40 h-24 bg-gray-50 rounded-xl flex items-center justify-center shrink-0 border border-gray-200/50 relative overflow-hidden">
+                  <div className="w-full md:w-40 h-24 bg-gray-50 rounded-xl flex items-center justify-center shrink-0 border border-gray-200/50 relative overflow-hidden">
                     <div className="text-center">
                       <svg className="w-8 h-8 text-[#86868B] mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />

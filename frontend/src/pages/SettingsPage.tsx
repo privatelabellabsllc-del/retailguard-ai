@@ -212,13 +212,13 @@ export default function SettingsPage() {
           { label: 'Opening Time', key: 'openTime', type: 'time' },
           { label: 'Closing Time', key: 'closeTime', type: 'time' },
         ].map((field) => (
-          <div key={field.key} className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-4 flex items-center justify-between">
+          <div key={field.key} className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <label className="text-sm font-semibold text-gray-900">{field.label}</label>
             <input
               type={field.type}
               value={general[field.key as keyof typeof general]}
               onChange={(e) => setGeneral({ ...general, [field.key]: e.target.value })}
-              className="px-4 py-2.5 bg-white/80 border border-gray-200/50 rounded-xl text-sm text-gray-900 w-64 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25 transition-all duration-200"
+              className="px-4 py-2.5 bg-white/80 border border-gray-200/50 rounded-xl text-sm text-gray-900 w-full sm:w-64 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/25 transition-all duration-200"
             />
           </div>
         ))}
@@ -473,22 +473,22 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen p-6 lg:p-8 space-y-8">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 space-y-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-gray-500/10 via-slate-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
-        <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Settings</h1>
+      <div className="bg-gradient-to-br from-gray-500/10 via-slate-500/5 to-transparent border border-gray-200/50 rounded-2xl p-5 md:p-8 lg:p-10">
+        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Settings</h1>
         <p className="text-base text-[#86868B] leading-relaxed">System configuration, user management, and feature permissions. Control every aspect of your RetailGuard AI deployment.</p>
       </div>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col md:flex-row gap-6">
         {/* Sidebar */}
-        <div className="w-56 shrink-0">
-          <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-2 space-y-0.5 sticky top-8">
+        <div className="w-full md:w-56 shrink-0">
+          <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-2 space-y-0.5 md:sticky md:top-8 flex md:flex-col overflow-x-auto">
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => { setActiveCategory(cat.id); setSelectedUser(null); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 ${
+                className={`w-full md:w-auto flex items-center gap-2 md:gap-3 px-3 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all duration-200 ${
                   activeCategory === cat.id
                     ? 'bg-blue-500/10 text-blue-500'
                     : 'text-[#86868B] hover:text-gray-900 hover:bg-gray-50'
@@ -502,7 +502,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-8">
+        <div className="flex-1 bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-4 md:p-8">
           {panelMap[activeCategory]?.()}
         </div>
       </div>

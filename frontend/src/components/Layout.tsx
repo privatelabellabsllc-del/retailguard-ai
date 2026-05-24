@@ -2,7 +2,7 @@
 // RetailGuard AI — Apple-White Layout with SVG Icons
 // ──────────────────────────────────────────────
 
-import { useState, useMemo, useCallback, type ReactNode } from 'react';
+import { useState, useMemo, useCallback, useEffect, type ReactNode } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import type { User } from '../types';
 
@@ -299,7 +299,13 @@ function getRoleBadgeColor(role: string): string {
 export default function Layout() {
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const user = useMemo(() => getUser(), []);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     security: true,
@@ -329,13 +335,24 @@ export default function Layout() {
           "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
       }}
     >
+      {/* ── Mobile Backdrop ──────────────────── */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
       {/* ── Sidebar ──────────────────────────── */}
       <aside
         className={`
-          group relative flex flex-col shrink-0
+          group flex flex-col shrink-0
           transition-all duration-300 ease-in-out
           bg-[#f5f5f7] border-r border-gray-200/80
-          ${sidebarCollapsed ? 'w-[68px]' : 'w-[250px]'}
+          fixed inset-y-0 left-0 z-50 w-[250px]
+          transform ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+          md:relative md:translate-x-0 md:z-auto
+          ${sidebarCollapsed ? 'md:w-[68px]' : 'md:w-[250px]'}
         `}
       >
         {/* Logo Area */}
@@ -348,7 +365,7 @@ export default function Layout() {
               <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-40" />
             </div>
           </div>
-          {!sidebarCollapsed && (
+          {(!sidebarCollapsed || mobileOpen) && (
             <div className="overflow-hidden">
               <div className="text-[13px] font-semibold text-gray-900 tracking-tight leading-tight">
                 RetailGuard
@@ -360,14 +377,15 @@ export default function Layout() {
           )}
         </div>
 
-        {/* Collapse Toggle */}
+        {/* Collapse Toggle — hidden on mobile */}
         <button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           className="
+            hidden md:flex
             absolute top-5 -right-3 z-10
             w-6 h-6 rounded-full
             bg-white border border-gray-200 shadow-sm
-            flex items-center justify-center
+            items-center justify-center
             text-gray-500 hover:text-gray-700 hover:bg-gray-50
             transition-all duration-200
             opacity-0 group-hover:opacity-100
@@ -387,8 +405,8 @@ export default function Layout() {
 
             return (
               <div key={section.key} className="mb-2">
-                {/* Section Header */}
-                {!sidebarCollapsed && (
+                {/* Section Header — always show on mobile, respect collapse on desktop */}
+                {(!sidebarCollapsed || mobileOpen) && (
                   <button
                     onClick={() => section.collapsible && toggleSection(section.key)}
                     className={`
@@ -437,10 +455,11 @@ export default function Layout() {
                       <Link
                         key={item.path}
                         to={item.path}
+                        onClick={() => setMobileOpen(false)}
                         className={`
                           group/item relative flex items-center gap-2.5 rounded-lg
-                          transition-all duration-200 ease-in-out
-                          ${sidebarCollapsed ? 'justify-center px-2 py-2' : 'px-2.5 py-[7px]'}
+                          transition-all duration-200 ease-in-out min-h-[44px] md:min-h-0
+                          ${sidebarCollapsed && !mobileOpen ? 'justify-center px-2 py-2' : 'px-2.5 py-[7px]'}
                           ${
                             isActive
                               ? 'bg-white text-gray-900 shadow-sm'
@@ -457,12 +476,12 @@ export default function Layout() {
                           {IconComponent ? <IconComponent /> : null}
                         </span>
 
-                        {!sidebarCollapsed && (
+                        {(!sidebarCollapsed || mobileOpen) && (
                           <span className="text-[13px] font-medium truncate">{item.label}</span>
                         )}
 
-                        {/* Tooltip for collapsed state */}
-                        {sidebarCollapsed && (
+                        {/* Tooltip for collapsed state — desktop only */}
+                        {sidebarCollapsed && !mobileOpen && (
                           <div
                             className="
                               absolute left-full ml-2 px-2.5 py-1.5 rounded-lg
@@ -486,7 +505,7 @@ export default function Layout() {
         </nav>
 
         {/* User Section at Bottom */}
-        {user && !sidebarCollapsed && (
+        {user && (!sidebarCollapsed || mobileOpen) && (
           <div className="shrink-0 px-4 py-3 border-t border-gray-200">
             <div className="flex items-center gap-2.5">
               {user.avatar_url ? (
@@ -519,14 +538,25 @@ export default function Layout() {
         <header
           className="
             shrink-0 flex items-center justify-between
-            px-8 h-[56px]
+            px-4 md:px-8 h-[56px]
             border-b border-gray-100
             bg-white/80 backdrop-blur-xl
           "
         >
-          <h1 className="text-[20px] font-semibold text-gray-900 tracking-tight">
-            {pageTitle}
-          </h1>
+          <div className="flex items-center gap-3">
+            {/* Hamburger — mobile only */}
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="md:hidden w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+            >
+              <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </button>
+            <h1 className="text-[17px] md:text-[20px] font-semibold text-gray-900 tracking-tight">
+              {pageTitle}
+            </h1>
+          </div>
 
           <div className="flex items-center gap-4">
             <button

@@ -140,12 +140,12 @@ export default function TeamPage() {
   };
 
   return (
-    <div className="min-h-screen p-6 lg:p-8 space-y-8">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 space-y-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-purple-500/10 via-violet-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
+      <div className="bg-gradient-to-br from-purple-500/10 via-violet-500/5 to-transparent border border-gray-200/50 rounded-2xl p-5 md:p-8 lg:p-10">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Team</h1>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Team</h1>
             <p className="text-base text-[#86868B] leading-relaxed">Manage your team, shifts, and schedules. Track who's on duty, clock in/out times, and build your weekly roster.</p>
           </div>
           <button
@@ -280,7 +280,8 @@ export default function TeamPage() {
       {/* Shift Schedule */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Shift Schedule</h2>
-        <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl overflow-x-auto">
+          <div className="min-w-[700px]">
           <div className="grid grid-cols-7 border-b border-gray-100">
             {DAYS.map((day) => (
               <div key={day} className="px-3 py-3 text-center text-[10px] font-semibold text-[#86868B] uppercase tracking-wider">
@@ -318,6 +319,7 @@ export default function TeamPage() {
                 </div>
               );
             })}
+          </div>
           </div>
         </div>
       </div>

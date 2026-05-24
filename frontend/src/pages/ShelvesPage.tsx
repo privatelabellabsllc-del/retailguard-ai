@@ -91,12 +91,12 @@ export default function ShelvesPage() {
   };
 
   return (
-    <div className="min-h-screen p-6 lg:p-8 space-y-8">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 space-y-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-teal-500/10 via-emerald-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
+      <div className="bg-gradient-to-br from-teal-500/10 via-emerald-500/5 to-transparent border border-gray-200/50 rounded-2xl p-5 md:p-8 lg:p-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Shelves</h1>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Shelves</h1>
             <p className="text-base text-[#86868B] leading-relaxed">Monitor shelf stock levels and out-of-stock alerts in real time. AI detects empty shelves and notifies your team automatically.</p>
           </div>
           <button

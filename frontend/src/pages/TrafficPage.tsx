@@ -120,10 +120,10 @@ export default function TrafficPage() {
   const statBgColors = ['bg-blue-500/10', 'bg-purple-500/10', 'bg-emerald-500/10'];
 
   return (
-    <div className="min-h-screen p-6 lg:p-8 space-y-8">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 space-y-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-blue-500/10 via-cyan-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
-        <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Smart Traffic</h1>
+      <div className="bg-gradient-to-br from-blue-500/10 via-cyan-500/5 to-transparent border border-gray-200/50 rounded-2xl p-5 md:p-8 lg:p-10">
+        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Smart Traffic</h1>
         <p className="text-base text-[#86868B] leading-relaxed">Smart foot traffic analytics powered by AI. Track customer flow, peak hours, and visitor trends across your store in real time.</p>
       </div>
 
@@ -136,7 +136,7 @@ export default function TrafficPage() {
               {animatedTotal.toLocaleString()}
             </div>
           </div>
-          <div className="flex gap-8">
+          <div className="flex flex-wrap gap-4 md:gap-8">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{uniqueVisitors.toLocaleString()}</div>
               <p className="text-xs text-[#86868B] mt-1">Unique</p>

@@ -60,7 +60,8 @@
   
   /* Alert panel animation */
   .alert-panel {
-    @apply fixed right-0 top-0 h-full w-[480px] bg-white border-l border-gray-200 shadow-2xl z-50;
+    @apply fixed right-0 top-0 h-full bg-white border-l border-gray-200 shadow-2xl z-50;
+    @apply w-full md:w-[480px];
     animation: slideIn 0.3s ease-out;
   }
   

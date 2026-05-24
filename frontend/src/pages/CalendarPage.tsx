@@ -134,10 +134,10 @@ export default function CalendarPage() {
   const maxTraffic = Math.max(...daysData.map(d => d.traffic), 1);
 
   return (
-    <div className="min-h-screen p-6 lg:p-8 space-y-8">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 space-y-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-indigo-500/10 via-blue-500/5 to-transparent border border-gray-200/50 rounded-2xl p-8 lg:p-10">
-        <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Calendar</h1>
+      <div className="bg-gradient-to-br from-indigo-500/10 via-blue-500/5 to-transparent border border-gray-200/50 rounded-2xl p-5 md:p-8 lg:p-10">
+        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Calendar</h1>
         <p className="text-base text-[#86868B] leading-relaxed">Store calendar with event tracking, shift schedules, and historical analytics. Plan ahead and spot trends over time.</p>
       </div>
 
@@ -216,7 +216,8 @@ export default function CalendarPage() {
       </div>
 
       {/* Calendar Grid */}
-      <div className={`bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-4 transition-opacity duration-500 ${loading ? 'opacity-50' : 'opacity-100'}`}>
+      <div className={`bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl p-4 transition-opacity duration-500 overflow-x-auto ${loading ? 'opacity-50' : 'opacity-100'}`}>
+        <div className="min-w-[500px]">
         {/* Day Names */}
         <div className="grid grid-cols-7 mb-2">
           {DAY_NAMES.map(d => (
@@ -274,6 +275,7 @@ export default function CalendarPage() {
               </button>
             );
           })}
+        </div>
         </div>
       </div>
 
