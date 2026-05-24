@@ -2,6 +2,8 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { cameras as camerasApi, alerts as alertsApi, persons } from '../services/api';
 import type { Camera, Alert, Person } from '../types';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 /* ───────────────────── SVG Icons ───────────────────── */
 
 const ExpandIcon = () => (
@@ -306,6 +308,46 @@ function TheftReviewModal({
   onAction: (action: string) => void;
 }) {
   const [activeClip, setActiveClip] = useState(0);
+  const [modalTab, setModalTab] = useState<'overview' | 'id' | 'manual'>('overview');
+  const [idFile, setIdFile] = useState<File | null>(null);
+  const [idType, setIdType] = useState('drivers_license');
+  const [idPreview, setIdPreview] = useState<string | null>(
+    offender.person.id_photo_path ? `${API_BASE}${offender.person.id_photo_path}` : null
+  );
+  const [uploadingId, setUploadingId] = useState(false);
+  const [savingManual, setSavingManual] = useState(false);
+  const [manualForm, setManualForm] = useState({
+    full_name: offender.person.full_name || offender.person.display_name || '',
+    date_of_birth: offender.person.date_of_birth || '',
+    address: offender.person.address || '',
+    phone_number: offender.person.phone_number || '',
+    notes: offender.person.notes || '',
+  });
+
+  const handleIdUpload = async () => {
+    if (!idFile || !offender.person.id) return;
+    setUploadingId(true);
+    try {
+      await persons.uploadIdPhoto(offender.person.id, idFile, idType);
+      setIdPreview(URL.createObjectURL(idFile));
+    } catch (e) { console.error(e); }
+    setUploadingId(false);
+  };
+
+  const handleManualSave = async () => {
+    if (!offender.person.id) return;
+    setSavingManual(true);
+    try {
+      await persons.update(offender.person.id, manualForm);
+    } catch (e) { console.error(e); }
+    setSavingManual(false);
+  };
+
+  const tabs = [
+    { key: 'overview' as const, label: 'Overview', icon: 'M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z' },
+    { key: 'id' as const, label: 'Capture ID', icon: 'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z' },
+    { key: 'manual' as const, label: 'Manual Entry', icon: 'M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10' },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4">
@@ -330,8 +372,30 @@ function TheftReviewModal({
           </button>
         </div>
 
+        {/* ─── Tab Bar ─── */}
+        <div className="shrink-0 border-b border-gray-200 bg-white px-4 md:px-6 flex gap-1 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setModalTab(tab.key)}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap border-b-2 ${
+                modalTab === tab.key ? 'text-gray-900 border-blue-500 bg-blue-50/50' : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d={tab.icon} />
+              </svg>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         {/* ─── Content ─── */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+
+          {/* ═══════ OVERVIEW TAB ═══════ */}
+          {modalTab === 'overview' && (
+          <div className="space-y-6">
           {/* Top: Person info + current tracking */}
           <div className="flex flex-col md:flex-row gap-4">
             {/* Person card */}
@@ -484,6 +548,124 @@ function TheftReviewModal({
               ))}
             </div>
           </div>
+          </div>
+          )}
+
+          {/* ═══════ CAPTURE ID TAB ═══════ */}
+          {modalTab === 'id' && (
+            <div className="max-w-xl mx-auto space-y-5">
+              <p className="text-sm text-gray-500">Take a photo of the suspect's ID or upload an existing image.</p>
+
+              {/* ID Type Selector */}
+              <div className="flex gap-2">
+                {[
+                  { val: 'drivers_license', label: "Driver's License" },
+                  { val: 'state_id', label: 'State ID' },
+                  { val: 'passport', label: 'Passport' },
+                  { val: 'other', label: 'Other' },
+                ].map((t) => (
+                  <button
+                    key={t.val}
+                    onClick={() => setIdType(t.val)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                      idType === t.val
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Preview / Upload area */}
+              {idPreview ? (
+                <div className="relative">
+                  <img src={idPreview} alt="ID" className="w-full max-h-64 object-contain rounded-xl border border-gray-200 bg-gray-50" />
+                  <button
+                    onClick={() => { setIdPreview(null); setIdFile(null); }}
+                    className="absolute top-2 right-2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow"
+                  >
+                    <CloseIcon />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition">
+                  <svg className="w-10 h-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" />
+                  </svg>
+                  <p className="text-sm font-medium text-gray-700">Take photo or upload ID</p>
+                  <p className="text-xs text-gray-400 mt-1">JPG, PNG up to 10MB</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) { setIdFile(f); setIdPreview(URL.createObjectURL(f)); }
+                    }}
+                  />
+                </label>
+              )}
+
+              <button
+                onClick={handleIdUpload}
+                disabled={!idFile || uploadingId}
+                className="w-full py-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 transition disabled:opacity-50"
+              >
+                {uploadingId ? 'Uploading...' : 'Save ID Photo'}
+              </button>
+            </div>
+          )}
+
+          {/* ═══════ MANUAL ENTRY TAB ═══════ */}
+          {modalTab === 'manual' && (
+            <div className="max-w-xl mx-auto space-y-5">
+              <p className="text-sm text-gray-500">Enter or update the suspect's personal information manually.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { key: 'full_name', label: 'Full Name', placeholder: 'John Doe' },
+                  { key: 'date_of_birth', label: 'Date of Birth', placeholder: 'MM/DD/YYYY', type: 'date' },
+                  { key: 'phone_number', label: 'Phone', placeholder: '(555) 123-4567' },
+                  { key: 'address', label: 'Address', placeholder: '123 Main St, City, State ZIP' },
+                ].map((field) => (
+                  <div key={field.key}>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">{field.label}</label>
+                    <input
+                      type={field.type || 'text'}
+                      placeholder={field.placeholder}
+                      value={(manualForm as any)[field.key]}
+                      onChange={(e) => setManualForm({ ...manualForm, [field.key]: e.target.value })}
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition bg-white"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Notes & Distinguishing Marks</label>
+                <textarea
+                  placeholder="Tattoos, scars, clothing, behavior patterns, any other identifying details..."
+                  value={manualForm.notes}
+                  onChange={(e) => setManualForm({ ...manualForm, notes: e.target.value })}
+                  rows={4}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition bg-white resize-none"
+                />
+              </div>
+
+              <button
+                onClick={handleManualSave}
+                disabled={savingManual}
+                className="w-full py-3 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 transition disabled:opacity-50"
+              >
+                {savingManual ? 'Saving...' : 'Save Information'}
+              </button>
+            </div>
+          )}
+
         </div>
 
         {/* ─── Action Buttons ─── */}
