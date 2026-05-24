@@ -5,7 +5,7 @@
  * - Person's photo and identity match details
  * - Live camera tracking
  * - Previous theft video
- * - 3 action buttons: Call Police 🚔 | Let Go 🤚 | Blacklist ⛔
+ * - 3 action buttons: Contact Authorities 🚔 | Let Go 🤚 | Blacklist ⛔
  * - Plus: Monitor 👁️ | Show Video to Customer 📺
  */
 import { useState } from 'react';
@@ -26,14 +26,14 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
-  const [show911, setShow911] = useState(false);
+  const [showAuthorities, setShowAuthorities] = useState(false);
 
   const isCritical = alert.priority === 'critical' || alert.alert_type === 'blacklisted_entered';
   const isThief = alert.person_status === 'thief' || alert.person_status === 'blacklisted';
 
   const handleAction = async (action: string) => {
     if (action === 'call_police') {
-      setShow911(true);
+      setShowAuthorities(true);
       return;
     }
     
@@ -210,14 +210,14 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
             
             {/* Primary actions — the 3 main buttons */}
             <div className="grid grid-cols-1 gap-2">
-              {/* 🚔 CALL POLICE */}
+              {/* 🚔 CONTACT AUTHORITIES */}
               <button
                 onClick={() => handleAction('call_police')}
                 disabled={actionLoading !== null}
                 className="flex items-center gap-3 w-full bg-red-600 hover:bg-red-700 text-gray-900 px-4 py-3 rounded-lg font-bold text-base transition-colors disabled:opacity-50"
               >
                 <Phone className="w-5 h-5" />
-                🚔 Call Police — 911
+                🚔 Contact Authorities
                 <Shield className="w-5 h-5 ml-auto" />
               </button>
 
@@ -285,35 +285,29 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
         </div>
       </div>
 
-      {/* 911 Call Overlay */}
-      {show911 && (
+      {/* Contact Authorities Overlay */}
+      {showAuthorities && (
         <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center">
           <div className="bg-white border-2 border-red-600 rounded-2xl p-8 max-w-md w-full mx-4 text-center">
             <div className="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <Shield className="w-10 h-10 text-gray-900" />
             </div>
-            <h2 className="text-3xl font-black text-gray-900 mb-2">CALL 911</h2>
+            <h2 className="text-3xl font-black text-gray-900 mb-2">CONTACT AUTHORITIES</h2>
             <p className="text-gray-500 mb-6">
-              Police badge verified. An evidence package with video, photos, and physical description has been prepared.
+              An evidence package with video, photos, and physical description has been prepared and is ready to share with law enforcement.
             </p>
-            <a
-              href="tel:911"
-              className="block w-full bg-red-600 hover:bg-red-700 text-gray-900 text-xl font-bold py-4 rounded-xl mb-3 transition-colors"
-            >
-              📞 Dial 911 Now
-            </a>
             <button
               onClick={async () => {
-                setShow911(false);
+                setShowAuthorities(false);
                 await handleAction('call_police');
               }}
-              className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-600 py-3 rounded-xl transition-colors"
+              className="block w-full bg-red-600 hover:bg-red-700 text-white text-xl font-bold py-4 rounded-xl mb-3 transition-colors"
             >
-              Log as Police Called
+              🚔 Log as Authorities Contacted
             </button>
             <button
-              onClick={() => setShow911(false)}
-              className="text-gray-600 text-sm mt-3 hover:text-gray-500"
+              onClick={() => setShowAuthorities(false)}
+              className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-600 py-3 rounded-xl transition-colors"
             >
               Cancel
             </button>
