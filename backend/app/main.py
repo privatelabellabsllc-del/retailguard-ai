@@ -148,6 +148,22 @@ def startup():
     except Exception as e:
         print(f"Admin seed error: {e}")
 
+    # Update camera RTSP URLs with correct Uniview paths via ngrok tunnel
+    try:
+        db = SessionLocal()
+        from sqlalchemy import text as sql_text
+        cameras = db.query(Camera).filter(Camera.is_active == True).order_by(Camera.name).all()
+        for i, cam in enumerate(cameras):
+            ch = i + 1
+            new_url = f"rtsp://admin:Sectec1227%40@6.tcp.ngrok.io:17137/unicast/c{ch}/s0/live"
+            cam.rtsp_url = new_url
+            cam.resolution = "3072x1728" if ch == 1 else "3840x2160"
+        db.commit()
+        print(f"Updated {len(cameras)} cameras with RTSP URLs via ngrok tunnel")
+        db.close()
+    except Exception as e:
+        print(f"Camera RTSP update error (non-fatal): {e}")
+
     # Initialize AI Stream Manager
     import asyncio
     try:
