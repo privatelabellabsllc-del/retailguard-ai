@@ -168,11 +168,40 @@ function CameraFeed({
   isExpanded: boolean;
 }) {
   const [time, setTime] = useState(new Date());
+  const [snapshotUrl, setSnapshotUrl] = useState<string | null>(null);
+  const [feedError, setFeedError] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // Auto-refresh live snapshot every 2 seconds
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!camera.rtsp_url || !token) return;
+
+    let cancelled = false;
+    const fetchSnapshot = async () => {
+      try {
+        const r = await fetch(`${API_BASE}/api/cameras/${camera.id}/snapshot`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) throw new Error('Failed');
+        const blob = await r.blob();
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        setSnapshotUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
+        setFeedError(false);
+      } catch {
+        if (!cancelled) setFeedError(true);
+      }
+    };
+    fetchSnapshot();
+    const iv = setInterval(fetchSnapshot, 2000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [camera.id, camera.rtsp_url]);
 
   return (
     <div
@@ -187,28 +216,48 @@ function CameraFeed({
         <div className="absolute inset-0 rounded-xl ring-4 ring-red-500 animate-pulse z-10 pointer-events-none" />
       )}
 
-      {/* Camera feed placeholder */}
+      {/* Camera feed — live snapshot */}
       <div className="relative bg-gray-900 aspect-video w-full">
-        {/* Simulated camera feed — gradient background with noise */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900 opacity-90" />
+        {/* Live snapshot image */}
+        {snapshotUrl ? (
+          <img
+            ref={imgRef}
+            src={snapshotUrl}
+            alt={camera.name}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+            {feedError ? (
+              <>
+                <svg className="w-8 h-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                </svg>
+                <span className="text-gray-400 text-xs">Feed unavailable</span>
+              </>
+            ) : camera.rtsp_url ? (
+              <>
+                <div className="w-8 h-8 border-3 border-gray-600 border-t-blue-400 rounded-full animate-spin" />
+                <span className="text-gray-400 text-xs">Connecting...</span>
+              </>
+            ) : (
+              <>
+                <CameraIcon />
+                <span className="text-gray-500 text-xs">No stream configured</span>
+              </>
+            )}
+          </div>
+        )}
 
-        {/* Camera overlay grid lines */}
-        <div className="absolute inset-0 opacity-[0.06]" style={{
-          backgroundImage: 'linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px)',
-          backgroundSize: '40px 40px',
-        }} />
-
-        {/* Simulated scene elements */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-20">
-          <CameraIcon />
-        </div>
-
-        {/* Store shelf outlines for realism */}
-        <div className="absolute bottom-0 left-0 right-0 h-1/3 opacity-10">
-          <div className="absolute bottom-0 left-[5%] w-[25%] h-full border-l border-t border-white/40 rounded-tl-sm" />
-          <div className="absolute bottom-0 right-[5%] w-[25%] h-full border-r border-t border-white/40 rounded-tr-sm" />
-          <div className="absolute bottom-[40%] left-[35%] w-[30%] h-[2px] bg-white/20" />
-        </div>
+        {/* LIVE badge */}
+        {snapshotUrl && (
+          <div className="absolute top-2 left-12 z-30">
+            <span className="flex items-center gap-1 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              LIVE
+            </span>
+          </div>
+        )}
 
         {/* ─── Offender Tracking Overlay ─── */}
         {isTracking && offenderBox && (
@@ -725,6 +774,39 @@ const MinusIcon = () => (
   </svg>
 );
 
+function CameraPickerThumb({ camId, hasRtsp, isOnline, isTrackingThis }: { camId: string; hasRtsp: boolean; isOnline: boolean; isTrackingThis: boolean }) {
+  const [thumb, setThumb] = useState<string | null>(null);
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!hasRtsp || !token) return;
+    let cancelled = false;
+    fetch(`${API_BASE}/api/cameras/${camId}/snapshot`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.blob() : null)
+      .then(blob => { if (blob && !cancelled) setThumb(URL.createObjectURL(blob)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [camId, hasRtsp]);
+
+  return (
+    <div className={`w-full aspect-video rounded-lg mb-2 overflow-hidden relative ${isOnline ? 'bg-gray-800' : 'bg-gray-300'}`}>
+      {thumb ? (
+        <img src={thumb} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <div className="flex items-center justify-center h-full">
+          <CameraIcon />
+        </div>
+      )}
+      {isTrackingThis && (
+        <div className="absolute bottom-1 left-1">
+          <span className="text-[8px] font-bold text-red-400 bg-red-950/80 px-1.5 py-0.5 rounded-full animate-pulse">
+            ● TRACKING
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LiveMonitorPage() {
   const [allCameras, setAllCameras] = useState<Camera[]>([]);
   const [selectedCameraIds, setSelectedCameraIds] = useState<Set<string>>(new Set());
@@ -966,21 +1048,8 @@ export default function LiveMonitorPage() {
                       : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-white'
                   }`}
                 >
-                  {/* Camera preview mini */}
-                  <div className={`w-full aspect-video rounded-lg mb-2 flex items-center justify-center ${
-                    isOnline ? 'bg-gray-800' : 'bg-gray-300'
-                  }`}>
-                    <div className="text-center">
-                      <CameraIcon />
-                      {isTrackingThis && (
-                        <div className="mt-1">
-                          <span className="text-[8px] font-bold text-red-400 bg-red-950/80 px-1.5 py-0.5 rounded-full animate-pulse">
-                            ● TRACKING
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  {/* Camera preview mini with live thumbnail */}
+                  <CameraPickerThumb camId={cam.id} hasRtsp={!!cam.rtsp_url} isOnline={isOnline} isTrackingThis={isTrackingThis} />
 
                   {/* Camera info */}
                   <div className="flex items-start justify-between gap-1">
