@@ -211,7 +211,7 @@ export const persons = {
 
 export const cameras = {
   list: async (params?: { status?: string; location_id?: string }) => {
-    const { data } = await api.get('/api/cameras', { params });
+    const { data } = await api.get('/api/cameras/', { params });
     return data;
   },
   get: async (id: string) => {
@@ -219,7 +219,7 @@ export const cameras = {
     return data;
   },
   create: async (payload: { name: string; rtsp_url: string; location_id: string; description?: string; channel_number?: number }) => {
-    const { data } = await api.post('/api/cameras', payload);
+    const { data } = await api.post('/api/cameras/', payload);
     return data;
   },
 };

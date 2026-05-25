@@ -149,11 +149,12 @@ export interface Camera {
   name: string;
   location_id: string;
   location_name?: string;
-  stream_url: string;
-  status: CameraStatus;
+  stream_url?: string;
+  rtsp_url?: string;
+  status?: CameraStatus;
   resolution?: string;
   fps?: number;
-  ai_enabled: boolean;
+  ai_enabled?: boolean;
   last_frame_url?: string;
   created_at: string;
   updated_at: string;
