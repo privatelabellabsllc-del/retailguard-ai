@@ -18,6 +18,7 @@ class CameraResponse(BaseModel):
     id: str
     name: str
     description: Optional[str]
+    rtsp_url: Optional[str]
     channel_number: Optional[int]
     is_active: bool
     is_ptz: bool
@@ -26,9 +27,26 @@ class CameraResponse(BaseModel):
     ai_enabled: bool
     position_x: Optional[float]
     position_y: Optional[float]
-    
+
     class Config:
         from_attributes = True
+
+
+def _camera_dict(c: Camera) -> dict:
+    return {
+        "id": str(c.id),
+        "name": c.name,
+        "description": c.description,
+        "rtsp_url": c.rtsp_url,
+        "channel_number": c.channel_number,
+        "is_active": c.is_active,
+        "is_ptz": c.is_ptz,
+        "resolution": c.resolution,
+        "fps": c.fps,
+        "ai_enabled": c.ai_enabled,
+        "position_x": c.position_x,
+        "position_y": c.position_y,
+    }
 
 
 class CameraCreate(BaseModel):
@@ -40,6 +58,20 @@ class CameraCreate(BaseModel):
     fps: int = 25
     is_ptz: bool = False
     ai_enabled: bool = True
+    position_x: Optional[float] = None
+    position_y: Optional[float] = None
+
+
+class CameraUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    rtsp_url: Optional[str] = None
+    channel_number: Optional[int] = None
+    resolution: Optional[str] = None
+    fps: Optional[int] = None
+    is_ptz: Optional[bool] = None
+    ai_enabled: Optional[bool] = None
+    is_active: Optional[bool] = None
     position_x: Optional[float] = None
     position_y: Optional[float] = None
 
@@ -63,19 +95,19 @@ async def list_cameras(
     current_user: User = Depends(get_current_user),
 ):
     cameras = db.query(Camera).filter(Camera.is_active == True).all()
-    return [{
-        "id": str(c.id),
-        "name": c.name,
-        "description": c.description,
-        "channel_number": c.channel_number,
-        "is_active": c.is_active,
-        "is_ptz": c.is_ptz,
-        "resolution": c.resolution,
-        "fps": c.fps,
-        "ai_enabled": c.ai_enabled,
-        "position_x": c.position_x,
-        "position_y": c.position_y,
-    } for c in cameras]
+    return [_camera_dict(c) for c in cameras]
+
+
+@router.get("/{camera_id}", response_model=CameraResponse)
+async def get_camera(
+    camera_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    camera = db.query(Camera).filter(Camera.id == uuid.UUID(camera_id)).first()
+    if not camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
+    return _camera_dict(camera)
 
 
 @router.post("/", response_model=CameraResponse)
@@ -88,19 +120,39 @@ async def create_camera(
     db.add(camera)
     db.commit()
     db.refresh(camera)
-    return {
-        "id": str(camera.id),
-        "name": camera.name,
-        "description": camera.description,
-        "channel_number": camera.channel_number,
-        "is_active": camera.is_active,
-        "is_ptz": camera.is_ptz,
-        "resolution": camera.resolution,
-        "fps": camera.fps,
-        "ai_enabled": camera.ai_enabled,
-        "position_x": camera.position_x,
-        "position_y": camera.position_y,
-    }
+    return _camera_dict(camera)
+
+
+@router.put("/{camera_id}", response_model=CameraResponse)
+async def update_camera(
+    camera_id: str,
+    camera_data: CameraUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    camera = db.query(Camera).filter(Camera.id == uuid.UUID(camera_id)).first()
+    if not camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
+    update_dict = camera_data.model_dump(exclude_unset=True)
+    for key, value in update_dict.items():
+        setattr(camera, key, value)
+    db.commit()
+    db.refresh(camera)
+    return _camera_dict(camera)
+
+
+@router.delete("/{camera_id}")
+async def delete_camera(
+    camera_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    camera = db.query(Camera).filter(Camera.id == uuid.UUID(camera_id)).first()
+    if not camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
+    camera.is_active = False
+    db.commit()
+    return {"status": "deleted", "id": camera_id}
 
 
 @router.post("/{camera_id}/zones")
