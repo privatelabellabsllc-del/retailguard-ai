@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { cameras as camerasApi, streams as streamsApi } from '../services/api';
 
 interface Camera {
@@ -6,6 +6,7 @@ interface Camera {
   name: string;
   description?: string;
   channel_number?: number;
+  rtsp_url?: string;
   is_active?: boolean;
   is_ptz?: boolean;
   resolution?: string;
@@ -14,6 +15,93 @@ interface Camera {
   position_x?: number;
   position_y?: number;
 }
+
+/* ── Live thumbnail component ── */
+const LiveFeed: React.FC<{ cameraId: string; hasRtsp: boolean }> = ({ cameraId, hasRtsp }) => {
+  const [src, setSrc] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const token = localStorage.getItem('token');
+
+  const fetchSnapshot = useCallback(async () => {
+    if (!hasRtsp || !token) return;
+    try {
+      const res = await fetch(`/api/cameras/${cameraId}/snapshot`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setSrc((prev) => { if (prev) URL.revokeObjectURL(prev); return url; });
+      setError(false);
+      setLoading(false);
+    } catch {
+      setError(true);
+      setLoading(false);
+    }
+  }, [cameraId, hasRtsp, token]);
+
+  useEffect(() => {
+    fetchSnapshot();
+    timerRef.current = setInterval(fetchSnapshot, 3000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (src) URL.revokeObjectURL(src);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchSnapshot]);
+
+  if (!hasRtsp) {
+    return (
+      <div className="aspect-video relative flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <svg className="w-8 h-8 text-gray-300 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+          </svg>
+          <span className="text-[10px] text-[#86868B] font-medium">NO RTSP URL</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="aspect-video relative bg-gray-900 overflow-hidden">
+      {loading && !src && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+          <svg className="animate-spin h-6 w-6 text-gray-400" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        </div>
+      )}
+      {error && !src && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+          <div className="text-center">
+            <svg className="w-6 h-6 text-amber-400 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <span className="text-[10px] text-[#86868B] font-medium">CONNECTING...</span>
+          </div>
+        </div>
+      )}
+      {src && (
+        <img
+          src={src}
+          alt="Live feed"
+          className="w-full h-full object-cover"
+        />
+      )}
+      {/* Live indicator */}
+      {src && !error && (
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-600/90 backdrop-blur-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+          <span className="text-[9px] font-bold text-white tracking-wider">LIVE</span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface StreamStatus {
   ai_available: boolean;
@@ -286,14 +374,9 @@ const CamerasPage: React.FC = () => {
               key={camera.id}
               className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl overflow-hidden transition-all duration-200 hover:border-[#48484A]/60 hover:shadow-sm hover:shadow-black/10 group"
             >
-              {/* Feed placeholder */}
-              <div className="aspect-video relative flex items-center justify-center bg-gray-100">
-                <div className="text-center">
-                  <svg className="w-8 h-8 text-gray-300 mx-auto mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
-                  </svg>
-                  <span className="text-[10px] text-[#86868B] font-medium">LIVE FEED</span>
-                </div>
+              {/* Live feed */}
+              <div className="relative">
+                <LiveFeed cameraId={camera.id} hasRtsp={!!camera.rtsp_url} />
 
                 {/* Status badge */}
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium backdrop-blur-md bg-white/80 border border-gray-200/50">

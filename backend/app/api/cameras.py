@@ -1,17 +1,29 @@
-"""Cameras API — manage camera feeds and zones."""
+"""Cameras API — manage camera feeds and zones, live snapshot proxy."""
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict, Tuple
 import uuid
+import asyncio
+import subprocess
+import time
+import logging
 
 from app.database import get_db
 from app.models.camera import Camera, CameraZone
 from app.api.auth import get_current_user
 from app.models.user import User
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/cameras", tags=["cameras"])
+
+# ── Snapshot cache (camera_id → (jpeg_bytes, timestamp)) ──
+_snapshot_cache: Dict[str, Tuple[bytes, float]] = {}
+_snapshot_locks: Dict[str, asyncio.Lock] = {}
+SNAPSHOT_TTL = 2.0  # seconds
 
 
 class CameraResponse(BaseModel):
@@ -186,3 +198,119 @@ async def get_zones(
         "is_high_value": z.is_high_value,
         "product_category": z.product_category,
     } for z in zones]
+
+
+# ── Live snapshot / MJPEG feed ──────────────────────────────────────
+
+async def _grab_snapshot(rtsp_url: str) -> Optional[bytes]:
+    """Grab a single JPEG frame from an RTSP stream using ffmpeg."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ffmpeg", "-y",
+            "-rtsp_transport", "tcp",
+            "-i", rtsp_url,
+            "-frames:v", "1",
+            "-q:v", "5",
+            "-f", "image2pipe",
+            "-vcodec", "mjpeg",
+            "-an",
+            "pipe:1",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=10)
+        if proc.returncode == 0 and stdout and len(stdout) > 1000:
+            return stdout
+        logger.warning(f"ffmpeg snapshot failed (rc={proc.returncode}): {stderr[-200:] if stderr else 'no stderr'}")
+        return None
+    except asyncio.TimeoutError:
+        logger.warning("ffmpeg snapshot timed out")
+        return None
+    except Exception as e:
+        logger.error(f"Snapshot error: {e}")
+        return None
+
+
+async def _get_cached_snapshot(camera_id: str, rtsp_url: str) -> Optional[bytes]:
+    """Get a snapshot with caching to avoid hammering the camera."""
+    now = time.time()
+    cached = _snapshot_cache.get(camera_id)
+    if cached and (now - cached[1]) < SNAPSHOT_TTL:
+        return cached[0]
+
+    # Per-camera lock to avoid concurrent ffmpeg calls for the same camera
+    if camera_id not in _snapshot_locks:
+        _snapshot_locks[camera_id] = asyncio.Lock()
+
+    async with _snapshot_locks[camera_id]:
+        # Double-check after acquiring lock
+        cached = _snapshot_cache.get(camera_id)
+        if cached and (now - cached[1]) < SNAPSHOT_TTL:
+            return cached[0]
+
+        jpeg = await _grab_snapshot(rtsp_url)
+        if jpeg:
+            _snapshot_cache[camera_id] = (jpeg, time.time())
+        return jpeg
+
+
+@router.get("/{camera_id}/snapshot")
+async def get_snapshot(
+    camera_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get a live JPEG snapshot from the camera."""
+    camera = db.query(Camera).filter(Camera.id == uuid.UUID(camera_id)).first()
+    if not camera:
+        raise HTTPException(404, "Camera not found")
+    if not camera.rtsp_url:
+        raise HTTPException(400, "No RTSP URL configured for this camera")
+
+    jpeg = await _get_cached_snapshot(str(camera.id), camera.rtsp_url)
+    if not jpeg:
+        raise HTTPException(502, "Failed to capture frame from camera")
+
+    return Response(
+        content=jpeg,
+        media_type="image/jpeg",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+        },
+    )
+
+
+async def _mjpeg_generator(camera_id: str, rtsp_url: str, fps: float = 2.0):
+    """Generate MJPEG stream from snapshots."""
+    interval = 1.0 / fps
+    while True:
+        jpeg = await _get_cached_snapshot(camera_id, rtsp_url)
+        if jpeg:
+            yield (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n"
+                b"Content-Length: " + str(len(jpeg)).encode() + b"\r\n\r\n"
+                + jpeg + b"\r\n"
+            )
+        await asyncio.sleep(interval)
+
+
+@router.get("/{camera_id}/stream")
+async def get_mjpeg_stream(
+    camera_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Stream live MJPEG from the camera (for <img> tag)."""
+    camera = db.query(Camera).filter(Camera.id == uuid.UUID(camera_id)).first()
+    if not camera:
+        raise HTTPException(404, "Camera not found")
+    if not camera.rtsp_url:
+        raise HTTPException(400, "No RTSP URL configured for this camera")
+
+    return StreamingResponse(
+        _mjpeg_generator(str(camera.id), camera.rtsp_url, fps=1.5),
+        media_type="multipart/x-mixed-replace; boundary=frame",
+        headers={"Cache-Control": "no-cache"},
+    )
