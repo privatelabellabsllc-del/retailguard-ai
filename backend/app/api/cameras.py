@@ -1,6 +1,6 @@
 """Cameras API — manage camera feeds and zones, live snapshot proxy."""
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -11,7 +11,7 @@ import subprocess
 import time
 import logging
 
-from app.database import get_db
+from app.database import get_db, SessionLocal
 from app.models.camera import Camera, CameraZone
 from app.api.auth import get_current_user
 from app.models.user import User
@@ -32,6 +32,123 @@ def _get_ffmpeg_semaphore() -> asyncio.Semaphore:
         _ffmpeg_semaphore = asyncio.Semaphore(4)  # max 4 concurrent ffmpeg processes
     return _ffmpeg_semaphore
 SNAPSHOT_TTL = 2.0  # seconds
+
+# ── Persistent live MJPEG stream manager ──────────────────────────────
+import threading
+
+class LiveStream:
+    """Manages a persistent ffmpeg process for one camera."""
+    def __init__(self, camera_id: str, rtsp_url: str):
+        self.camera_id = camera_id
+        self.rtsp_url = rtsp_url
+        self.process: Optional[subprocess.Popen] = None
+        self.clients: int = 0
+        self.last_frame: Optional[bytes] = None
+        self.lock = threading.Lock()
+        self._stop_timer: Optional[threading.Timer] = None
+        self._running = False
+
+    def start(self):
+        if self._running:
+            return
+        self._running = True
+        cmd = [
+            "ffmpeg", "-rtsp_transport", "tcp",
+            "-i", self.rtsp_url,
+            "-f", "mjpeg",
+            "-q:v", "5",
+            "-r", "8",
+            "-an",
+            "pipe:1",
+        ]
+        self.process = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            bufsize=10**6,
+        )
+        self._reader_thread = threading.Thread(target=self._read_frames, daemon=True)
+        self._reader_thread.start()
+
+    def _read_frames(self):
+        """Read JPEG frames from ffmpeg stdout."""
+        buf = b""
+        while self._running and self.process and self.process.poll() is None:
+            chunk = self.process.stdout.read(4096)
+            if not chunk:
+                break
+            buf += chunk
+            while True:
+                soi = buf.find(b'\xff\xd8')
+                if soi == -1:
+                    buf = b""
+                    break
+                eoi = buf.find(b'\xff\xd9', soi + 2)
+                if eoi == -1:
+                    buf = buf[soi:]
+                    break
+                frame = buf[soi:eoi + 2]
+                with self.lock:
+                    self.last_frame = frame
+                buf = buf[eoi + 2:]
+
+    def get_frame(self) -> Optional[bytes]:
+        with self.lock:
+            return self.last_frame
+
+    def stop(self):
+        self._running = False
+        if self.process:
+            try:
+                self.process.kill()
+                self.process.wait(timeout=3)
+            except Exception:
+                pass
+            self.process = None
+
+
+_live_streams: Dict[str, LiveStream] = {}
+_live_streams_lock = threading.Lock()
+_MAX_LIVE_STREAMS = 6
+
+
+def _get_or_create_live_stream(camera_id: str, rtsp_url: str) -> Optional[LiveStream]:
+    with _live_streams_lock:
+        if camera_id in _live_streams:
+            stream = _live_streams[camera_id]
+            if stream._stop_timer:
+                stream._stop_timer.cancel()
+                stream._stop_timer = None
+            stream.clients += 1
+            return stream
+        if len(_live_streams) >= _MAX_LIVE_STREAMS:
+            for sid, s in list(_live_streams.items()):
+                if s.clients <= 0:
+                    s.stop()
+                    del _live_streams[sid]
+                    break
+            if len(_live_streams) >= _MAX_LIVE_STREAMS:
+                return None
+        stream = LiveStream(camera_id, rtsp_url)
+        stream.clients = 1
+        stream.start()
+        _live_streams[camera_id] = stream
+        return stream
+
+
+def _release_live_stream(camera_id: str):
+    with _live_streams_lock:
+        stream = _live_streams.get(camera_id)
+        if stream:
+            stream.clients = max(0, stream.clients - 1)
+            if stream.clients <= 0:
+                def cleanup():
+                    with _live_streams_lock:
+                        s = _live_streams.get(camera_id)
+                        if s and s.clients <= 0:
+                            s.stop()
+                            del _live_streams[camera_id]
+                stream._stop_timer = threading.Timer(30.0, cleanup)
+                stream._stop_timer.start()
+
 
 
 class CameraResponse(BaseModel):
@@ -272,12 +389,37 @@ async def _get_cached_snapshot(camera_id: str, rtsp_url: str) -> Optional[bytes]
         return jpeg
 
 
+
+def _resolve_user_from_token(token: Optional[str]) -> Optional[User]:
+    """Decode a JWT token query parameter and return the User, or None."""
+    if not token:
+        return None
+    try:
+        from jose import jwt, JWTError
+        from app.config import settings
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        username = payload.get("sub")
+        if username:
+            db = SessionLocal()
+            try:
+                return db.query(User).filter(User.username == username).first()
+            finally:
+                db.close()
+    except Exception:
+        pass
+    return None
+
 @router.get("/{camera_id}/snapshot")
 async def get_snapshot(
     camera_id: str,
-    current_user: User = Depends(get_current_user),
+    token: Optional[str] = Query(None),
+    current_user: Optional[User] = Depends(get_current_user),
 ):
     """Get a live JPEG snapshot from the camera — no DB session held during ffmpeg."""
+    if not current_user and token:
+        current_user = _resolve_user_from_token(token)
+    if not current_user:
+        raise HTTPException(401, "Not authenticated")
     # Check in-memory URL cache first (no DB needed)
     rtsp_url = _rtsp_url_cache.get(camera_id)
     if not rtsp_url:
@@ -326,12 +468,47 @@ async def _mjpeg_generator(camera_id: str, rtsp_url: str, fps: float = 2.0):
         await asyncio.sleep(interval)
 
 
+async def _live_mjpeg_generator(camera_id: str, rtsp_url: str):
+    """Generate MJPEG stream from persistent ffmpeg process."""
+    stream = _get_or_create_live_stream(camera_id, rtsp_url)
+    if not stream:
+        return
+
+    last_frame_id = None
+    try:
+        # Wait up to 2 seconds for first frame
+        for _ in range(20):
+            if stream.get_frame():
+                break
+            await asyncio.sleep(0.1)
+
+        while True:
+            frame = stream.get_frame()
+            if frame and id(frame) != last_frame_id:
+                last_frame_id = id(frame)
+                yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n"
+                    b"Content-Length: " + str(len(frame)).encode() + b"\r\n\r\n"
+                    + frame + b"\r\n"
+                )
+            await asyncio.sleep(0.08)
+    finally:
+        _release_live_stream(camera_id)
+
+
 @router.get("/{camera_id}/stream")
 async def get_mjpeg_stream(
     camera_id: str,
-    current_user: User = Depends(get_current_user),
+    token: Optional[str] = Query(None),
+    current_user: Optional[User] = Depends(get_current_user),
 ):
-    """Stream live MJPEG from the camera (for <img> tag) — no DB held during stream."""
+    """Stream live MJPEG from the camera via persistent ffmpeg process."""
+    if not current_user and token:
+        current_user = _resolve_user_from_token(token)
+    if not current_user:
+        raise HTTPException(401, "Not authenticated")
+
     rtsp_url = _rtsp_url_cache.get(camera_id)
     if not rtsp_url:
         db = SessionLocal()
@@ -347,7 +524,7 @@ async def get_mjpeg_stream(
             db.close()
 
     return StreamingResponse(
-        _mjpeg_generator(camera_id, rtsp_url, fps=1.5),
+        _live_mjpeg_generator(camera_id, rtsp_url),
         media_type="multipart/x-mixed-replace; boundary=frame",
         headers={"Cache-Control": "no-cache"},
     )

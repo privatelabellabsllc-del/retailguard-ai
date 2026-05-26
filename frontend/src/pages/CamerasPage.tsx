@@ -118,6 +118,7 @@ const CamerasPage: React.FC = () => {
   const [addLoading, setAddLoading] = useState(false);
   const [streamActionLoading, setStreamActionLoading] = useState<string | null>(null);
   const [demoRunning, setDemoRunning] = useState(false);
+  const [selectedCamera, setSelectedCamera] = useState<Camera | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -372,7 +373,8 @@ const CamerasPage: React.FC = () => {
           {cameras.map((camera) => (
             <div
               key={camera.id}
-              className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl overflow-hidden transition-all duration-200 hover:border-[#48484A]/60 hover:shadow-sm hover:shadow-black/10 group"
+              className="bg-white/80 backdrop-blur-xl border border-gray-200/50 rounded-2xl overflow-hidden transition-all duration-200 hover:border-[#48484A]/60 hover:shadow-sm hover:shadow-black/10 group cursor-pointer"
+              onClick={() => setSelectedCamera(camera)}
             >
               {/* Live feed */}
               <div className="relative">
@@ -455,6 +457,49 @@ const CamerasPage: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Fullscreen Live View Modal */}
+      {selectedCamera && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex flex-col">
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-6 py-4">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                LIVE
+              </span>
+              <h2 className="text-white text-lg font-semibold">{selectedCamera.name}</h2>
+            </div>
+            <button
+              onClick={() => setSelectedCamera(null)}
+              className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-all duration-200"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Stream */}
+          <div className="flex-1 flex items-center justify-center px-6 pb-4">
+            <img
+              src={`/api/cameras/${selectedCamera.id}/stream?token=${localStorage.getItem('token')}`}
+              alt={selectedCamera.name}
+              className="max-w-full max-h-full rounded-xl object-contain"
+            />
+          </div>
+
+          {/* Bottom bar */}
+          <div className="px-6 py-4 bg-black/50 border-t border-white/10">
+            <div className="flex items-center gap-6 text-sm text-gray-300">
+              <span>{selectedCamera.name}</span>
+              {selectedCamera.resolution && <span>Resolution: {selectedCamera.resolution}</span>}
+              {selectedCamera.channel_number !== undefined && <span>Channel: {selectedCamera.channel_number}</span>}
+              {selectedCamera.fps && <span>{selectedCamera.fps} FPS</span>}
+            </div>
+          </div>
         </div>
       )}
 

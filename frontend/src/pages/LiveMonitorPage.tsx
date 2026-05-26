@@ -177,30 +177,14 @@ function CameraFeed({
     return () => clearInterval(t);
   }, []);
 
-  // Auto-refresh live snapshot every 2 seconds
+  // Use persistent MJPEG stream URL instead of snapshot polling
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!camera.rtsp_url || !token) return;
 
-    let cancelled = false;
-    const fetchSnapshot = async () => {
-      try {
-        const r = await fetch(`${API_BASE}/api/cameras/${camera.id}/snapshot`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!r.ok) throw new Error('Failed');
-        const blob = await r.blob();
-        if (cancelled) return;
-        const url = URL.createObjectURL(blob);
-        setSnapshotUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
-        setFeedError(false);
-      } catch {
-        if (!cancelled) setFeedError(true);
-      }
-    };
-    fetchSnapshot();
-    const iv = setInterval(fetchSnapshot, 2000);
-    return () => { cancelled = true; clearInterval(iv); };
+    const streamUrl = `${API_BASE}/api/cameras/${camera.id}/stream?token=${token}`;
+    setSnapshotUrl(streamUrl);
+    setFeedError(false);
   }, [camera.id, camera.rtsp_url]);
 
   return (
