@@ -218,7 +218,7 @@ async def _grab_snapshot(rtsp_url: str) -> Optional[bytes]:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=10)
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=5)
         if proc.returncode == 0 and stdout and len(stdout) > 1000:
             return stdout
         logger.warning(f"ffmpeg snapshot failed (rc={proc.returncode}): {stderr[-200:] if stderr else 'no stderr'}")

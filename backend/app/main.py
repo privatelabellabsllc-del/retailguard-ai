@@ -155,7 +155,7 @@ def startup():
         cameras = db.query(Camera).filter(Camera.is_active == True).order_by(Camera.name).all()
         for i, cam in enumerate(cameras):
             ch = i + 1
-            new_url = f"rtsp://admin:Sectec1227%40@6.tcp.ngrok.io:17137/unicast/c{ch}/s0/live"
+            new_url = f"rtsp://admin:Sectec1227%40@0.tcp.ngrok.io:23625/unicast/c{ch}/s0/live"
             cam.rtsp_url = new_url
             cam.resolution = "3072x1728" if ch == 1 else "3840x2160"
         db.commit()
