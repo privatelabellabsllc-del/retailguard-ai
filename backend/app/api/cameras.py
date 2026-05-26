@@ -23,6 +23,14 @@ router = APIRouter(prefix="/api/cameras", tags=["cameras"])
 # ── Snapshot cache (camera_id → (jpeg_bytes, timestamp)) ──
 _snapshot_cache: Dict[str, Tuple[bytes, float]] = {}
 _snapshot_locks: Dict[str, asyncio.Lock] = {}
+_rtsp_url_cache: Dict[str, str] = {}  # camera_id -> rtsp_url (refreshed on list/get)
+_ffmpeg_semaphore: Optional[asyncio.Semaphore] = None
+
+def _get_ffmpeg_semaphore() -> asyncio.Semaphore:
+    global _ffmpeg_semaphore
+    if _ffmpeg_semaphore is None:
+        _ffmpeg_semaphore = asyncio.Semaphore(4)  # max 4 concurrent ffmpeg processes
+    return _ffmpeg_semaphore
 SNAPSHOT_TTL = 2.0  # seconds
 
 
@@ -107,7 +115,12 @@ async def list_cameras(
     current_user: User = Depends(get_current_user),
 ):
     cameras = db.query(Camera).filter(Camera.is_active == True).all()
-    return [_camera_dict(c) for c in cameras]
+    result = [_camera_dict(c) for c in cameras]
+    # Populate RTSP URL cache
+    for c in cameras:
+        if c.rtsp_url:
+            _rtsp_url_cache[str(c.id)] = c.rtsp_url
+    return result
 
 
 @router.get("/{camera_id}", response_model=CameraResponse)
@@ -225,6 +238,11 @@ async def _grab_snapshot(rtsp_url: str) -> Optional[bytes]:
         return None
     except asyncio.TimeoutError:
         logger.warning("ffmpeg snapshot timed out")
+        try:
+            proc.kill()
+            await proc.wait()
+        except Exception:
+            pass
         return None
     except Exception as e:
         logger.error(f"Snapshot error: {e}")
@@ -257,17 +275,29 @@ async def _get_cached_snapshot(camera_id: str, rtsp_url: str) -> Optional[bytes]
 @router.get("/{camera_id}/snapshot")
 async def get_snapshot(
     camera_id: str,
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get a live JPEG snapshot from the camera."""
-    camera = db.query(Camera).filter(Camera.id == uuid.UUID(camera_id)).first()
-    if not camera:
-        raise HTTPException(404, "Camera not found")
-    if not camera.rtsp_url:
-        raise HTTPException(400, "No RTSP URL configured for this camera")
+    """Get a live JPEG snapshot from the camera — no DB session held during ffmpeg."""
+    # Check in-memory URL cache first (no DB needed)
+    rtsp_url = _rtsp_url_cache.get(camera_id)
+    if not rtsp_url:
+        # Quick DB lookup then release immediately
+        db = SessionLocal()
+        try:
+            camera = db.query(Camera).filter(Camera.id == uuid.UUID(camera_id)).first()
+            if not camera:
+                raise HTTPException(404, "Camera not found")
+            if not camera.rtsp_url:
+                raise HTTPException(400, "No RTSP URL configured for this camera")
+            rtsp_url = camera.rtsp_url
+            _rtsp_url_cache[camera_id] = rtsp_url
+        finally:
+            db.close()
 
-    jpeg = await _get_cached_snapshot(str(camera.id), camera.rtsp_url)
+    # Limit concurrent ffmpeg processes
+    sem = _get_ffmpeg_semaphore()
+    async with sem:
+        jpeg = await _get_cached_snapshot(camera_id, rtsp_url)
     if not jpeg:
         raise HTTPException(502, "Failed to capture frame from camera")
 
@@ -299,18 +329,25 @@ async def _mjpeg_generator(camera_id: str, rtsp_url: str, fps: float = 2.0):
 @router.get("/{camera_id}/stream")
 async def get_mjpeg_stream(
     camera_id: str,
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Stream live MJPEG from the camera (for <img> tag)."""
-    camera = db.query(Camera).filter(Camera.id == uuid.UUID(camera_id)).first()
-    if not camera:
-        raise HTTPException(404, "Camera not found")
-    if not camera.rtsp_url:
-        raise HTTPException(400, "No RTSP URL configured for this camera")
+    """Stream live MJPEG from the camera (for <img> tag) — no DB held during stream."""
+    rtsp_url = _rtsp_url_cache.get(camera_id)
+    if not rtsp_url:
+        db = SessionLocal()
+        try:
+            camera = db.query(Camera).filter(Camera.id == uuid.UUID(camera_id)).first()
+            if not camera:
+                raise HTTPException(404, "Camera not found")
+            if not camera.rtsp_url:
+                raise HTTPException(400, "No RTSP URL configured for this camera")
+            rtsp_url = camera.rtsp_url
+            _rtsp_url_cache[camera_id] = rtsp_url
+        finally:
+            db.close()
 
     return StreamingResponse(
-        _mjpeg_generator(str(camera.id), camera.rtsp_url, fps=1.5),
+        _mjpeg_generator(camera_id, rtsp_url, fps=1.5),
         media_type="multipart/x-mixed-replace; boundary=frame",
         headers={"Cache-Control": "no-cache"},
     )
