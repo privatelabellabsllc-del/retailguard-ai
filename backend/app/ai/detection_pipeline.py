@@ -9,10 +9,19 @@ This is the main loop that processes camera frames:
 5. Video clip capture for incidents
 """
 import asyncio
+import os
 import cv2
 import numpy as np
 import logging
 import time
+
+# Configure FFMPEG capture options BEFORE any VideoCapture is created:
+# TCP transport (ngrok tunnels drop UDP), 5s socket timeout so a dead
+# stream fails fast instead of hanging forever.
+os.environ.setdefault(
+    "OPENCV_FFMPEG_CAPTURE_OPTIONS",
+    "rtsp_transport;tcp|stimeout;5000000|max_delay;500000"
+)
 from typing import Optional, Dict, List, Tuple
 from datetime import datetime, timedelta
 from collections import deque
@@ -39,10 +48,14 @@ class TrackedPerson:
     is_offender: bool = False
     is_blacklisted: bool = False
     alert_sent: bool = False
+    # k-of-n consistency: recent person_id match results (None = no match)
+    match_history: List[Optional[str]] = None
     
     def __post_init__(self):
         if self.face_detections is None:
             self.face_detections = []
+        if self.match_history is None:
+            self.match_history = []
 
 
 @dataclass 
@@ -75,6 +88,7 @@ class DetectionPipeline:
         on_incident_callback=None,    # Called when concealment detected
         on_clip_ready_callback=None,  # Called when evidence clip is ready
         on_theft_classified_callback=None,  # Called when theft/paid is determined
+        on_face_sample_callback=None,  # Called with good-quality face samples for enrollment
     ):
         self.camera_id = camera_id
         self.face_engine = face_engine
@@ -86,6 +100,7 @@ class DetectionPipeline:
         self.on_incident = on_incident_callback
         self.on_clip_ready = on_clip_ready_callback
         self.on_theft_classified = on_theft_classified_callback
+        self.on_face_sample = on_face_sample_callback
         
         # Wire up zone tracker callback
         self.zone_tracker.on_theft_classified = self._on_journey_classified
@@ -93,70 +108,165 @@ class DetectionPipeline:
         # Tracking state
         self.tracked_persons: Dict[str, TrackedPerson] = {}
         self.active_clips: Dict[str, ClipCapture] = {}
-        self.frame_count = 0
-        self.fps = 0
+        self.frame_count = 0          # ANALYZED frame counter
+        self.fps = 0                  # Source stream FPS
+        self.analyze_fps = getattr(settings, "ANALYZE_FPS", 5.0)
+        self.analyze_width = getattr(settings, "ANALYZE_WIDTH", 960)
         self.frame_width = 0
         self.frame_height = 0
         
-        # Frame buffer for pre-event recording
-        self.frame_buffer: deque = deque(maxlen=settings.CLIP_PRE_SECONDS * 30)
+        # Frame buffer for pre-event recording — sized for the ANALYSIS rate,
+        # since only analyzed (downscaled) frames are buffered
+        buf_len = max(1, int(settings.CLIP_PRE_SECONDS * self.analyze_fps) + 2)
+        self.frame_buffer: deque = deque(maxlen=buf_len)
         
-        # Processing intervals (not every frame needs full AI)
-        self.face_detect_interval = 5     # Run face detection every 5 frames
-        self.identity_match_interval = 15  # Run identity matching every 15 frames
-        self.pose_interval = 2            # Run pose every 2 frames (important for concealment)
-        self.zone_check_interval = 3      # Check zone positions every 3 frames
-        self.timeout_check_interval = 150  # Check journey timeouts every 150 frames (~5s)
+        # Processing intervals in ANALYZED frames (~5 fps analysis rate)
+        self.face_detect_interval = 2      # Face detection every 2 analyzed frames
+        self.identity_match_interval = 2   # Identity matching alongside detection
+        self.pose_interval = 1             # Pose every analyzed frame (critical for concealment)
+        self.zone_check_interval = 1       # Zone positions every analyzed frame
+        self.timeout_check_interval = 25   # Journey timeouts every ~5s at 5fps
+        
+        # False-positive controls
+        self.match_consecutive_required = getattr(settings, "FACE_MATCH_CONSECUTIVE", 3)
+        self.alert_cooldown_seconds = getattr(settings, "ALERT_COOLDOWN_SECONDS", 600)
+        self._alert_last_sent: Dict[str, float] = {}   # person_id -> last alert ts
+        self._last_face_sample: Dict[str, float] = {}  # person_id -> last enrollment sample ts
+        
+        # HOG person detector — construct ONCE (was rebuilt every frame)
+        self._hog = cv2.HOGDescriptor()
+        self._hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
         
         self._running = False
         self._track_counter = 0
 
+    def _open_capture(self, rtsp_url: str) -> Optional[cv2.VideoCapture]:
+        """Open an RTSP capture with FFMPEG backend, TCP transport and timeouts."""
+        cap = cv2.VideoCapture(rtsp_url, cv2.CAP_FFMPEG)
+        # Newer OpenCV builds support explicit open/read timeouts
+        for prop, ms in (("CAP_PROP_OPEN_TIMEOUT_MSEC", 8000), ("CAP_PROP_READ_TIMEOUT_MSEC", 8000)):
+            prop_id = getattr(cv2, prop, None)
+            if prop_id is not None:
+                try:
+                    cap.set(prop_id, ms)
+                except Exception:
+                    pass
+        try:
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
+        except Exception:
+            pass
+        if not cap.isOpened():
+            cap.release()
+            return None
+        return cap
+
     async def start(self, rtsp_url: str):
-        """Start processing a camera stream."""
+        """
+        Start processing a camera stream.
+        Robustness:
+        - Auto-reconnect with exponential backoff (ngrok tunnels drop often)
+        - All blocking cv2 reads run in a worker thread (never block the event loop)
+        - Frames are subsampled to ~ANALYZE_FPS and downscaled to ANALYZE_WIDTH
+          before AI (source is 4K — full-rate/full-res analysis is infeasible)
+        """
         logger.info(f"Starting detection pipeline for camera {self.camera_id}")
         self._running = True
-        
-        cap = cv2.VideoCapture(rtsp_url)
-        if not cap.isOpened():
-            logger.error(f"Failed to open stream: {rtsp_url}")
-            return
-        
-        actual_fps = cap.get(cv2.CAP_PROP_FPS) or 25
-        self.fps = actual_fps
-        
+        max_backoff = getattr(settings, "RTSP_RECONNECT_MAX_BACKOFF", 60.0)
+        backoff = 1.0
+        cap = None
+
         try:
             while self._running:
-                ret, frame = cap.read()
-                if not ret:
-                    logger.warning("Frame read failed, reconnecting...")
-                    await asyncio.sleep(1)
-                    cap.release()
-                    cap = cv2.VideoCapture(rtsp_url)
+                # === (Re)connect with exponential backoff ===
+                if cap is None:
+                    cap = await asyncio.to_thread(self._open_capture, rtsp_url)
+                    if cap is None:
+                        logger.warning(
+                            f"Camera {self.camera_id}: stream unavailable, "
+                            f"retrying in {backoff:.0f}s"
+                        )
+                        await asyncio.sleep(backoff)
+                        backoff = min(backoff * 2, max_backoff)
+                        continue
+                    backoff = 1.0
+                    src_fps = cap.get(cv2.CAP_PROP_FPS)
+                    if not src_fps or src_fps <= 0 or src_fps > 120:
+                        src_fps = 25.0
+                    self.fps = src_fps
+                    frame_skip = max(1, round(src_fps / self.analyze_fps))
+                    raw_counter = 0
+                    consecutive_failures = 0
+                    logger.info(
+                        f"Camera {self.camera_id}: connected @ {src_fps:.0f}fps, "
+                        f"analyzing every {frame_skip} frame(s)"
+                    )
+
+                raw_counter += 1
+
+                # Skip frames cheaply with grab() — only decode analysis frames
+                if raw_counter % frame_skip != 0:
+                    ok = await asyncio.to_thread(cap.grab)
+                    if not ok:
+                        consecutive_failures += 1
+                        if consecutive_failures >= 25:
+                            logger.warning(f"Camera {self.camera_id}: stream dropped, reconnecting...")
+                            cap.release()
+                            cap = None
+                        continue
+                    consecutive_failures = 0
                     continue
-                
+
+                ret, frame = await asyncio.to_thread(cap.read)
+                if not ret or frame is None:
+                    consecutive_failures += 1
+                    if consecutive_failures >= 25:
+                        logger.warning(f"Camera {self.camera_id}: stream dropped, reconnecting...")
+                        cap.release()
+                        cap = None
+                    else:
+                        await asyncio.sleep(0.05)
+                    continue
+                consecutive_failures = 0
+
+                # Downscale before AI (e.g. 3840px -> 960px wide)
+                h, w = frame.shape[:2]
+                if w > self.analyze_width:
+                    scale = self.analyze_width / w
+                    frame = cv2.resize(
+                        frame, (self.analyze_width, max(1, int(h * scale))),
+                        interpolation=cv2.INTER_AREA,
+                    )
+
                 timestamp = time.time()
                 self.frame_count += 1
-                
+
                 # Store frame in buffer (for pre-event clips)
                 self.frame_buffer.append((frame.copy(), timestamp))
-                
+
                 # Track frame dimensions for zone calculations
                 if self.frame_height == 0:
                     self.frame_height, self.frame_width = frame.shape[:2]
-                
-                # Process frame
-                await self._process_frame(frame, timestamp)
-                
+
+                # Process frame — one bad frame must never kill the pipeline
+                try:
+                    await self._process_frame(frame, timestamp)
+                except Exception:
+                    logger.exception(f"Camera {self.camera_id}: frame processing error (continuing)")
+
                 # Update active clip captures
                 await self._update_clips(frame, timestamp)
-                
+
                 # Yield to event loop
-                await asyncio.sleep(0.001)
-                
+                await asyncio.sleep(0)
+
+        except asyncio.CancelledError:
+            logger.info(f"Pipeline for camera {self.camera_id} cancelled")
+            raise
         except Exception as e:
             logger.error(f"Pipeline error: {e}", exc_info=True)
         finally:
-            cap.release()
+            if cap is not None:
+                cap.release()
             self._running = False
 
     async def _process_frame(self, frame: np.ndarray, timestamp: float):
@@ -187,12 +297,47 @@ class DetectionPipeline:
                         best_face = max(faces, key=lambda f: f.quality_score)
                         face_matches = self.face_engine.match_against_database(best_face)
                         
+                        matched_id = face_matches[0].person_id if face_matches else None
+                        
+                        # k-of-n consistency: require the SAME person matched in
+                        # N consecutive samples before accepting the identity —
+                        # a single-frame match is not enough to fire an alert.
+                        person.match_history.append(matched_id)
+                        if len(person.match_history) > self.match_consecutive_required:
+                            person.match_history.pop(0)
+                        
                         if face_matches:
                             top_match = face_matches[0]
-                            person.person_id = top_match.person_id
+                            consistent = (
+                                len(person.match_history) >= self.match_consecutive_required
+                                and all(m == matched_id for m in person.match_history)
+                            )
                             
-                            # Check if this is an offender or blacklisted person
-                            await self._check_offender_status(person, top_match, timestamp)
+                            if consistent:
+                                person.person_id = top_match.person_id
+                                
+                                # Multi-sample enrollment: feed good-quality face
+                                # samples back for persistence (DB + cache), at
+                                # most one sample per person per 30s
+                                if (
+                                    self.on_face_sample
+                                    and best_face.quality_score >= 0.6
+                                    and timestamp - self._last_face_sample.get(top_match.person_id, 0) > 30
+                                ):
+                                    self._last_face_sample[top_match.person_id] = timestamp
+                                    try:
+                                        await self.on_face_sample(
+                                            person_id=top_match.person_id,
+                                            embedding=best_face.embedding,
+                                            quality=best_face.quality_score,
+                                            angle=best_face.angle,
+                                            camera_id=self.camera_id,
+                                        )
+                                    except Exception:
+                                        logger.exception("Face sample enrollment failed")
+                                
+                                # Check if this is an offender or blacklisted person
+                                await self._check_offender_status(person, top_match, timestamp)
         
         # === STEP 3: Pose Estimation & Concealment Detection (high frequency) ===
         if self.frame_count % self.pose_interval == 0:
@@ -234,8 +379,8 @@ class DetectionPipeline:
         In production, replace with YOLO or similar for better speed/accuracy.
         """
         try:
-            hog = cv2.HOGDescriptor()
-            hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+            # Reuse the detector built in __init__ (rebuilding per-frame was slow)
+            hog = self._hog
             
             # Resize for speed
             scale = 0.5
@@ -313,8 +458,16 @@ class DetectionPipeline:
         """Check if matched person is a known offender and trigger alert."""
         if person.alert_sent:
             return
-            
-        # This would query the database - simplified here
+        
+        # Global per-person alert cooldown — never spam the clerk with repeat
+        # alerts for the same person within the cooldown window (default 10 min),
+        # even across different tracks/re-entries.
+        last_sent = self._alert_last_sent.get(face_match.person_id, 0.0)
+        if timestamp - last_sent < self.alert_cooldown_seconds:
+            person.alert_sent = True  # Suppress further attempts on this track
+            return
+        
+        # StreamManager._on_alert checks person status (offender/blacklisted) in DB
         if self.on_alert:
             await self.on_alert(
                 camera_id=self.camera_id,
@@ -323,11 +476,17 @@ class DetectionPipeline:
                 timestamp=timestamp,
             )
             person.alert_sent = True
+            self._alert_last_sent[face_match.person_id] = timestamp
 
     async def _handle_concealment_event(
         self, person: TrackedPerson, event: ConcealmentEvent, timestamp: float
     ):
         """Handle a detected concealment event — start clip capture."""
+        # Dedup: if this track already has an evidence clip in progress, don't
+        # restart it (would lose frames) or double-create incidents.
+        if person.track_id in self.active_clips:
+            return
+        
         logger.warning(
             f"CONCEALMENT DETECTED: {event.description} "
             f"(track={person.track_id}, confidence={event.confidence:.0%})"

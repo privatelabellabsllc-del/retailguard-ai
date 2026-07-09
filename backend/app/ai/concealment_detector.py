@@ -112,11 +112,16 @@ class ConcealmentDetector:
     6. Calculate confidence based on all signals
     """
 
-    def __init__(self, confidence_threshold: float = 0.75):
+    def __init__(self, confidence_threshold: float = 0.75,
+                 sustain_count: int = 2, event_cooldown: float = 30.0):
         self.confidence_threshold = confidence_threshold
+        self.sustain_count = max(1, sustain_count)   # Consecutive positive analyses required
+        self.event_cooldown = event_cooldown          # Seconds before same track can re-fire
         self.pose_model = None
         self._frame_buffer: deque = deque(maxlen=150)  # ~5 seconds at 30fps
         self._active_tracks: Dict[str, deque] = {}  # person_id -> pose history
+        self._pending_counts: Dict[str, int] = {}   # person_id -> consecutive positive analyses
+        self._last_event_time: Dict[str, float] = {}  # person_id -> last fired event time
         self._shelf_regions: List[Dict] = []  # Configured shelf regions
         self._initialized = False
 
@@ -206,8 +211,28 @@ class ConcealmentDetector:
         if len(self._active_tracks[person_id]) < 15:
             return None
 
+        # Per-track cooldown: don't re-fire immediately after an event
+        last_fired = self._last_event_time.get(person_id, 0.0)
+        if timestamp - last_fired < self.event_cooldown:
+            return None
+
         # Run concealment analysis
         event = self._analyze_for_concealment(person_id)
+
+        # Require sustained detection over multiple consecutive analyses
+        # before firing — cuts one-frame false positives dramatically.
+        if event is None:
+            self._pending_counts[person_id] = 0
+            return None
+
+        count = self._pending_counts.get(person_id, 0) + 1
+        self._pending_counts[person_id] = count
+        if count < self.sustain_count:
+            return None
+
+        # Fire event; start cooldown and reset pending counter
+        self._pending_counts[person_id] = 0
+        self._last_event_time[person_id] = timestamp
         return event
 
     def _analyze_hand_states(self, hand_results) -> Tuple[HandState, HandState]:
@@ -289,14 +314,17 @@ class ConcealmentDetector:
         hip_key = f"{hand}_hip"
         shoulder_key = f"{hand}_shoulder"
 
-        # Extract hand trajectory
-        trajectory = []
+        # Extract hand trajectory.
+        # NOTE: trajectory is a FILTERED list (visibility > 0.5), so trajectory
+        # indices do NOT line up with `frames` indices. We store the source
+        # frame-list index in each entry to avoid index-mixing bugs.
+        trajectory = []   # (wx, wy, frame_number, timestamp, frames_idx)
         hand_states = []
-        for f in frames:
+        for fi, f in enumerate(frames):
             if wrist_key in f.keypoints:
                 wx, wy, vis = f.keypoints[wrist_key]
                 if vis > 0.5:
-                    trajectory.append((wx, wy, f.frame_number, f.timestamp))
+                    trajectory.append((wx, wy, f.frame_number, f.timestamp, fi))
                     state = f.left_hand_state if hand == "left" else f.right_hand_state
                     hand_states.append(state)
 
@@ -317,11 +345,13 @@ class ConcealmentDetector:
         # === SIGNAL 2: Downward motion toward body ===
         pocket_motion_detected = False
         pocket_frame_idx = None
-        if reach_frame_idx:
+        if reach_frame_idx is not None:
             for i in range(reach_frame_idx, len(trajectory)):
-                # Hand moved down toward hip level
-                if hip_key in frames[min(i, len(frames)-1)].keypoints:
-                    hip_y = frames[min(i, len(frames)-1)].keypoints[hip_key][1]
+                # Hand moved down toward hip level — look up the hip position in
+                # the SAME source frame this trajectory point came from
+                src_frame = frames[trajectory[i][4]]
+                if hip_key in src_frame.keypoints:
+                    hip_y = src_frame.keypoints[hip_key][1]
                     hand_y = trajectory[i][1]
                     
                     # Hand is near hip level
@@ -350,8 +380,8 @@ class ConcealmentDetector:
         # === SIGNAL 4: Hand enters pocket/bag region ===
         in_concealment_zone = False
         concealment_type = None
-        if pocket_frame_idx and pocket_frame_idx < len(frames):
-            f = frames[min(pocket_frame_idx, len(frames)-1)]
+        if pocket_frame_idx is not None:
+            f = frames[trajectory[pocket_frame_idx][4]]
             if hip_key in f.keypoints and wrist_key in f.keypoints:
                 hip_x, hip_y, _ = f.keypoints[hip_key]
                 wrist_x, wrist_y, _ = f.keypoints[wrist_key]
@@ -371,7 +401,7 @@ class ConcealmentDetector:
 
         # === SIGNAL 5: Speed pattern (quick shelf-to-pocket motion) ===
         quick_motion = False
-        if reach_frame_idx and pocket_frame_idx:
+        if reach_frame_idx is not None and pocket_frame_idx is not None:
             duration = trajectory[pocket_frame_idx][3] - trajectory[reach_frame_idx][3]
             if 0.3 < duration < 3.0:  # Concealment typically 0.3-3 seconds
                 quick_motion = True
@@ -409,7 +439,7 @@ class ConcealmentDetector:
             return None
 
         # Build event
-        key_frame = trajectory[pocket_frame_idx][2] if pocket_frame_idx else trajectory[-1][2]
+        key_frame = trajectory[pocket_frame_idx][2] if pocket_frame_idx is not None else trajectory[-1][2]
         
         description = self._generate_description(
             hand, concealment_type, signals, confidence
@@ -476,6 +506,8 @@ class ConcealmentDetector:
     def clear_track(self, person_id: str):
         """Clear tracking data for a person (when they leave frame)."""
         self._active_tracks.pop(person_id, None)
+        self._pending_counts.pop(person_id, None)
+        self._last_event_time.pop(person_id, None)
 
     def get_active_track_count(self) -> int:
         return len(self._active_tracks)

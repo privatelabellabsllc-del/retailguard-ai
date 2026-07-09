@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     
     # Storage (S3-compatible for video clips)
     STORAGE_BACKEND: str = "local"  # "local" or "s3"
-    LOCAL_CLIP_DIR: str = "static/clips"
+    LOCAL_CLIP_DIR: str = "/app/uploads/clips"  # Persistent; served via /api/clips and /uploads/clips
     S3_BUCKET: Optional[str] = None
     S3_REGION: Optional[str] = None
     S3_ACCESS_KEY: Optional[str] = None
@@ -28,7 +28,12 @@ class Settings(BaseSettings):
     
     # AI Settings
     FACE_RECOGNITION_MODEL: str = "large"  # "small" or "large" (large = 128-dim, more accurate)
-    FACE_MATCH_TOLERANCE: float = 0.45  # Lower = stricter (default 0.6, we use 0.45 for high accuracy)
+    FACE_MATCH_TOLERANCE: float = 0.5  # Lower = stricter (dlib default 0.6; 0.5 = high accuracy)
+    FACE_MIN_SIZE_PX: int = 80          # Minimum face height/width in pixels to enroll/match
+    FACE_BLUR_THRESHOLD: float = 60.0   # Laplacian variance below this = too blurry, skip
+    FACE_MATCH_CONSECUTIVE: int = 3     # Require same person matched N consecutive samples before alerting
+    MAX_EMBEDDINGS_PER_PERSON: int = 10 # Cap of best-quality embeddings kept per person
+    ALERT_COOLDOWN_SECONDS: int = 600   # Don't re-alert for the same person within this window
     BODY_MATCH_WEIGHT: float = 0.20
     FACE_MATCH_WEIGHT: float = 0.45
     GAIT_MATCH_WEIGHT: float = 0.15
@@ -38,9 +43,16 @@ class Settings(BaseSettings):
     
     # Detection Settings
     CONCEALMENT_CONFIDENCE_THRESHOLD: float = 0.75  # Min confidence to flag concealment
+    CONCEALMENT_SUSTAIN_COUNT: int = 2   # Require detection over N consecutive analyses before firing
+    CONCEALMENT_EVENT_COOLDOWN: float = 30.0  # Seconds before same track can fire another event
     CLIP_PRE_SECONDS: int = 10  # Seconds before event to include in clip
     CLIP_POST_SECONDS: int = 20  # Seconds after event to include in clip
     CLIP_MAX_SECONDS: int = 30  # Max clip duration
+
+    # Stream processing (source cameras are 4K — downscale + subsample before AI)
+    ANALYZE_FPS: float = 5.0    # Target analysis rate (frames/sec fed to AI)
+    ANALYZE_WIDTH: int = 960    # Downscale frames to this width before AI processing
+    RTSP_RECONNECT_MAX_BACKOFF: float = 60.0  # Max seconds between reconnect attempts
     
     # Camera
     NVR_IP: Optional[str] = None

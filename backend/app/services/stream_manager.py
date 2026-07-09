@@ -1,6 +1,10 @@
 import asyncio
-import cv2
 import logging
+
+try:
+    import cv2
+except ImportError:  # Graceful degradation: API-only mode without OpenCV
+    cv2 = None
 import time
 import os
 from datetime import datetime
@@ -42,6 +46,9 @@ class StreamManager:
         self.identity_matcher = None
         self.ai_available = False
         self._initialized = False
+        # Maps (camera_id, track_id) -> incident_id so clips and theft
+        # classifications attach to the RIGHT incident (not just "most recent")
+        self._incident_by_track: Dict[tuple, str] = {}
     
     async def initialize(self):
         """Initialize AI engines and load embeddings cache."""
@@ -56,9 +63,13 @@ class StreamManager:
             self.face_engine = FaceEngine(
                 model=settings.FACE_RECOGNITION_MODEL,
                 tolerance=settings.FACE_MATCH_TOLERANCE,
+                min_face_size=getattr(settings, "FACE_MIN_SIZE_PX", 80),
+                blur_threshold=getattr(settings, "FACE_BLUR_THRESHOLD", 100.0),
             )
             self.concealment_detector = ConcealmentDetector(
                 confidence_threshold=settings.CONCEALMENT_CONFIDENCE_THRESHOLD,
+                sustain_count=getattr(settings, "CONCEALMENT_SUSTAIN_COUNT", 3),
+                event_cooldown=getattr(settings, "CONCEALMENT_EVENT_COOLDOWN", 20.0),
             )
             self.identity_matcher = IdentityMatcher(
                 face_weight=settings.FACE_MATCH_WEIGHT,
@@ -95,15 +106,17 @@ class StreamManager:
         try:
             from app.models.person import FaceEmbedding
             db = SessionLocal()
-            embeddings = db.query(FaceEmbedding).all()
-            data = [{
-                "person_id": str(e.person_id),
-                "embedding_id": str(e.id),
-                "embedding": e.embedding,
-                "quality_score": e.quality_score or 0.5,
-            } for e in embeddings]
+            try:
+                embeddings = db.query(FaceEmbedding).all()
+                data = [{
+                    "person_id": str(e.person_id),
+                    "embedding_id": str(e.id),
+                    "embedding": e.embedding,
+                    "quality_score": e.quality_score or 0.5,
+                } for e in embeddings]
+            finally:
+                db.close()
             self.face_engine.load_embeddings_cache(data)
-            db.close()
             logger.info(f"Loaded {len(data)} face embeddings into cache")
         except Exception as e:
             logger.error(f"Failed to load embeddings: {e}")
@@ -132,53 +145,63 @@ class StreamManager:
         if camera_id in self.streams and self.streams[camera_id].status == "running":
             return {"error": "Camera already running", "status": "running"}
         
-        # Get camera from DB
+        # Get camera from DB — extract everything needed BEFORE closing the
+        # session (no detached-instance access), and always close it
         from app.models.camera import Camera
         db = SessionLocal()
-        camera = db.query(Camera).filter(Camera.id == camera_id).first()
-        if not camera:
+        try:
+            camera = db.query(Camera).filter(Camera.id == camera_id).first()
+            if not camera:
+                return {"error": "Camera not found"}
+            if not camera.ai_enabled:
+                return {"error": "AI not enabled for this camera"}
+            rtsp_url = self._build_rtsp_url(camera)
+            cam_id = str(camera.id)
+            cam_name = camera.name
+        finally:
             db.close()
-            return {"error": "Camera not found"}
         
-        if not camera.ai_enabled:
-            db.close()
-            return {"error": "AI not enabled for this camera"}
-        
-        rtsp_url = self._build_rtsp_url(camera)
-        db.close()
-        
-        # Create pipeline with callbacks
+        # Create pipeline with callbacks (incl. theft classification and
+        # multi-sample face enrollment, which were previously never wired up)
         from app.ai.detection_pipeline import DetectionPipeline
         
         pipeline = DetectionPipeline(
-            camera_id=str(camera.id),
+            camera_id=cam_id,
             face_engine=self.face_engine,
             concealment_detector=self.concealment_detector,
             identity_matcher=self.identity_matcher,
             on_alert_callback=self._on_alert,
             on_incident_callback=self._on_incident,
             on_clip_ready_callback=self._on_clip_ready,
+            on_theft_classified_callback=self._on_theft_classified,
+            on_face_sample_callback=self._on_face_sample,
         )
         
         stream = CameraStream(
-            camera_id=str(camera.id),
-            camera_name=camera.name,
+            camera_id=cam_id,
+            camera_name=cam_name,
             rtsp_url=rtsp_url,
             pipeline=pipeline,
             status="starting",
             started_at=datetime.utcnow(),
         )
         
-        self.streams[str(camera.id)] = stream
+        self.streams[cam_id] = stream
         
         # Start pipeline in background task
         stream.task = asyncio.create_task(self._run_pipeline(stream))
         
+        # Mask credentials — NEVER str.replace with an empty pattern (it
+        # inserts *** between every character of the URL)
+        masked_url = rtsp_url
+        if settings.NVR_PASSWORD:
+            masked_url = masked_url.replace(settings.NVR_PASSWORD, "***")
+        
         return {
-            "camera_id": str(camera.id),
-            "camera_name": camera.name,
+            "camera_id": cam_id,
+            "camera_name": cam_name,
             "status": "starting",
-            "rtsp_url": rtsp_url.replace(settings.NVR_PASSWORD or "", "***"),
+            "rtsp_url": masked_url,
         }
     
     async def _run_pipeline(self, stream: CameraStream):
@@ -215,15 +238,21 @@ class StreamManager:
         """Start AI processing for all AI-enabled cameras."""
         from app.models.camera import Camera
         db = SessionLocal()
-        cameras = db.query(Camera).filter(
-            Camera.is_active == True,
-            Camera.ai_enabled == True,
-        ).all()
-        db.close()
+        try:
+            camera_ids = [str(c.id) for c in db.query(Camera).filter(
+                Camera.is_active == True,
+                Camera.ai_enabled == True,
+            ).all()]
+        finally:
+            db.close()
         
         results = []
-        for cam in cameras:
-            result = await self.start_camera(str(cam.id))
+        for cid in camera_ids:
+            try:
+                result = await self.start_camera(cid)
+            except Exception as e:
+                logger.error(f"Failed to start camera {cid}: {e}")
+                result = {"camera_id": cid, "error": str(e)}
             results.append(result)
         
         return {"started": len(results), "results": results}
@@ -368,6 +397,11 @@ class StreamManager:
             
         except Exception as e:
             logger.error(f"Alert callback error: {e}", exc_info=True)
+            try:
+                db.rollback()
+                db.close()
+            except Exception:
+                pass
     
     async def _on_incident(self, camera_id: str, track_id: str, person_id: Optional[str],
                            event, timestamp: float):
@@ -420,9 +454,14 @@ class StreamManager:
             db.commit()
             db.refresh(incident)
             
-            # Store incident_id on the stream for clip association
-            if camera_id in self.streams:
-                self.streams[camera_id]._current_incident_id = str(incident.id)
+            # Remember which incident belongs to this camera+track so the
+            # evidence clip (finishing ~30s later) and the eventual theft
+            # classification attach to the RIGHT incident
+            self._incident_by_track[(camera_id, track_id)] = str(incident.id)
+            if len(self._incident_by_track) > 1000:
+                # Prune oldest half to bound memory
+                for k in list(self._incident_by_track)[:500]:
+                    self._incident_by_track.pop(k, None)
             
             # Push real-time notification
             await alert_manager.broadcast_alert({
@@ -444,6 +483,11 @@ class StreamManager:
             
         except Exception as e:
             logger.error(f"Incident callback error: {e}", exc_info=True)
+            try:
+                db.rollback()
+                db.close()
+            except Exception:
+                pass
     
     async def _on_clip_ready(self, clip):
         """Called when evidence clip capture is complete."""
@@ -462,31 +506,53 @@ class StreamManager:
             filename = f"{clip.camera_id}_{timestamp_str}.mp4"
             filepath = os.path.join(clip_dir, filename)
             
-            # Write frames to video file
+            # Compute REAL fps from frame timestamps — frames are captured at
+            # the analysis rate (~5 fps), so hardcoding 25 fps produced clips
+            # that played back ~5x too fast.
+            if len(clip.frames) > 1:
+                duration = max(0.5, clip.frames[-1][1] - clip.frames[0][1])
+                fps = max(1.0, min(30.0, (len(clip.frames) - 1) / duration))
+            else:
+                fps = 5.0
+            
             first_frame = clip.frames[0][0]
             h, w = first_frame.shape[:2]
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            fps = 25.0
-            writer = cv2.VideoWriter(filepath, fourcc, fps, (w, h))
             
-            for frame, ts in clip.frames:
-                writer.write(frame)
-            writer.release()
-            
-            # Generate thumbnail from key frame
             thumb_filename = f"{clip.camera_id}_{timestamp_str}_thumb.jpg"
             thumb_path = os.path.join(clip_dir, thumb_filename)
-            key_idx = len(clip.frames) // 3  # ~1/3 into clip (around the event)
-            cv2.imwrite(thumb_path, clip.frames[key_idx][0])
+            
+            def _write_video():
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                writer = cv2.VideoWriter(filepath, fourcc, fps, (w, h))
+                try:
+                    for frame, ts in clip.frames:
+                        writer.write(frame)
+                finally:
+                    writer.release()
+                # Thumbnail from key frame (~1/3 into clip, around the event)
+                key_idx = len(clip.frames) // 3
+                cv2.imwrite(thumb_path, clip.frames[key_idx][0])
+            
+            # Video encoding is CPU-heavy — keep it off the event loop
+            await asyncio.to_thread(_write_video)
             
             # Find or create incident clip record
+            from app.models.incident import ReviewStatus
             db = SessionLocal()
             
-            # Find the most recent pending incident for this camera
-            incident = db.query(Incident).filter(
-                Incident.camera_id == uuid.UUID(clip.camera_id),
-                Incident.review_status == "pending",
-            ).order_by(Incident.created_at.desc()).first()
+            # Prefer the exact incident created for this camera+track; fall
+            # back to the most recent pending incident for this camera
+            incident = None
+            mapped_id = self._incident_by_track.get((clip.camera_id, clip.track_id))
+            if mapped_id:
+                incident = db.query(Incident).filter(
+                    Incident.id == uuid.UUID(mapped_id)
+                ).first()
+            if incident is None:
+                incident = db.query(Incident).filter(
+                    Incident.camera_id == uuid.UUID(clip.camera_id),
+                    Incident.review_status == ReviewStatus.PENDING,
+                ).order_by(Incident.created_at.desc()).first()
             
             if incident:
                 clip_record = IncidentClip(
@@ -509,3 +575,136 @@ class StreamManager:
             
         except Exception as e:
             logger.error(f"Clip save error: {e}", exc_info=True)
+            try:
+                db.rollback()
+                db.close()
+            except Exception:
+                pass
+
+    async def _on_theft_classified(self, track_id, person_id, camera_id,
+                                   classification, confidence, reason, journey):
+        """
+        Called when the zone tracker classifies a journey
+        (LIKELY_PAID / LIKELY_THEFT / PARTIAL_THEFT).
+        Persists the classification onto the originating incident and pushes
+        a real-time notification. This callback was previously never wired,
+        so classifications were silently dropped.
+        """
+        db = None
+        try:
+            import uuid
+            from app.models.incident import Incident
+            from app.api.alerts import alert_manager
+            
+            classification_value = (
+                classification.value if hasattr(classification, "value")
+                else str(classification)
+            )
+            
+            db = SessionLocal()
+            incident = None
+            mapped_id = self._incident_by_track.get((camera_id, track_id))
+            if mapped_id:
+                incident = db.query(Incident).filter(
+                    Incident.id == uuid.UUID(mapped_id)
+                ).first()
+            if incident is None:
+                incident = db.query(Incident).filter(
+                    Incident.camera_id == uuid.UUID(camera_id),
+                ).order_by(Incident.created_at.desc()).first()
+            
+            if incident is not None:
+                # theft_classification is a String column — store the enum value
+                incident.theft_classification = classification_value
+                incident.classification_confidence = confidence
+                incident.classification_reason = reason
+                incident.visited_register = bool(
+                    getattr(journey, "visited_register", False)
+                )
+                incident.register_dwell_seconds = float(
+                    getattr(journey, "register_dwell_seconds", 0.0) or 0.0
+                )
+                incident.concealment_count = int(
+                    getattr(journey, "concealment_count", 1) or 1
+                )
+                db.commit()
+            
+            incident_id = str(incident.id) if incident is not None else None
+            db.close()
+            db = None
+            
+            await alert_manager.broadcast_alert({
+                "type": "theft_classified",
+                "classification": {
+                    "incident_id": incident_id,
+                    "track_id": track_id,
+                    "person_id": person_id,
+                    "camera_id": camera_id,
+                    "classification": classification_value,
+                    "confidence": confidence,
+                    "reason": reason,
+                },
+            })
+            
+            logger.warning(
+                f"THEFT CLASSIFICATION: {classification_value} "
+                f"({confidence:.0%}) — {reason}"
+            )
+        except Exception as e:
+            logger.error(f"Theft classification callback error: {e}", exc_info=True)
+        finally:
+            if db is not None:
+                try:
+                    db.rollback()
+                    db.close()
+                except Exception:
+                    pass
+
+    async def _on_face_sample(self, person_id, embedding, quality, angle, camera_id):
+        """
+        Multi-sample enrollment: persist an additional good-quality embedding
+        for a matched person AND add it to the in-memory cache so it is used
+        immediately (previously new DB embeddings were invisible until restart).
+        """
+        try:
+            import uuid
+            import numpy as np
+            from app.models.person import FaceEmbedding
+            
+            emb_array = np.asarray(embedding, dtype=np.float64)
+            max_per_person = getattr(settings, "MAX_EMBEDDINGS_PER_PERSON", 10)
+            
+            db = SessionLocal()
+            try:
+                existing = db.query(FaceEmbedding).filter(
+                    FaceEmbedding.person_id == uuid.UUID(person_id)
+                ).all()
+                if len(existing) >= max_per_person:
+                    # Keep only the best-quality embeddings: replace the worst
+                    # if the new sample is better, otherwise skip
+                    worst = min(existing, key=lambda e: e.quality_score or 0.0)
+                    if (worst.quality_score or 0.0) >= quality:
+                        return
+                    db.delete(worst)
+                    self.face_engine.remove_embedding_from_cache(person_id, str(worst.id))
+                
+                record = FaceEmbedding(
+                    person_id=uuid.UUID(person_id),
+                    embedding=emb_array.tobytes(),
+                    quality_score=quality,
+                    face_angle=angle,
+                    source_camera_id=uuid.UUID(camera_id) if camera_id else None,
+                )
+                db.add(record)
+                db.commit()
+                db.refresh(record)
+                emb_id = str(record.id)
+            finally:
+                db.close()
+            
+            # Keep the in-memory cache in sync — no full reload required
+            if self.face_engine:
+                self.face_engine.add_embedding_to_cache(person_id, emb_array, emb_id, quality)
+            logger.info(f"Enrolled new face sample for person {person_id} (quality {quality:.2f})")
+        except Exception as e:
+            logger.error(f"Face sample enrollment error: {e}", exc_info=True)

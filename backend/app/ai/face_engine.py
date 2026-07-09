@@ -46,9 +46,14 @@ class FaceEngine:
     4. Quality-weighted: Higher quality embeddings get more weight
     """
 
-    def __init__(self, model: str = "large", tolerance: float = 0.45):
+    MAX_EMBEDDINGS_PER_PERSON = 10
+
+    def __init__(self, model: str = "large", tolerance: float = 0.5,
+                 min_face_size: int = 80, blur_threshold: float = 60.0):
         self.model = model
         self.tolerance = tolerance
+        self.min_face_size = min_face_size
+        self.blur_threshold = blur_threshold
         self._embeddings_cache: Dict[str, List[Tuple[np.ndarray, str, float]]] = {}
         # Cache: {person_id: [(embedding, embedding_id, quality_score), ...]}
         self._initialized = False
@@ -66,50 +71,85 @@ class FaceEngine:
         self._initialized = True
         logger.info(f"FaceEngine initialized (model={self.model}, tolerance={self.tolerance})")
 
-    def detect_faces(self, frame: np.ndarray) -> List[FaceDetection]:
+    def detect_faces(self, frame: np.ndarray, is_bgr: bool = True) -> List[FaceDetection]:
         """
         Detect all faces in a frame and compute embeddings.
+        Frames from OpenCV are BGR — face_recognition/dlib expects RGB,
+        so we convert by default (is_bgr=True).
+        Faces below min size or too blurry (Laplacian variance) are skipped.
         Returns list of FaceDetection objects.
         """
         if not self._initialized:
             raise RuntimeError("FaceEngine not initialized. Call initialize() first.")
-        
+
         detections = []
-        
+
         if self._face_recognition:
-            # Detect face locations
-            face_locations = self._face_recognition.face_locations(frame, model="cnn")
-            
+            import cv2
+
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) if is_bgr else frame
+            rgb = np.ascontiguousarray(rgb)
+
+            # "hog" is CPU-friendly; "cnn" requires a CUDA build of dlib and is
+            # far too slow on CPU for live video.
+            face_locations = self._face_recognition.face_locations(rgb, model="hog")
+
             if not face_locations:
                 return []
-            
+
+            # Quality gating: minimum size + blur check BEFORE expensive encoding
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if is_bgr else cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+            good_locations = []
+            for loc in face_locations:
+                top, right, bottom, left = loc
+                fh, fw = bottom - top, right - left
+                if fh < self.min_face_size or fw < self.min_face_size:
+                    continue
+                face_gray = gray[max(0, top):bottom, max(0, left):right]
+                if face_gray.size == 0:
+                    continue
+                blur_var = cv2.Laplacian(face_gray, cv2.CV_64F).var()
+                if blur_var < self.blur_threshold:
+                    continue  # Too blurry for reliable embedding
+                good_locations.append((loc, blur_var))
+
+            if not good_locations:
+                return []
+
+            face_locations = [g[0] for g in good_locations]
+
             # Compute 128-dim embeddings
             encodings = self._face_recognition.face_encodings(
-                frame, face_locations, 
-                num_jitters=2,  # More jitters = more accurate but slower
+                rgb, face_locations,
+                num_jitters=1,
                 model=self.model
             )
-            
+
             # Get landmarks for angle estimation
-            landmarks_list = self._face_recognition.face_landmarks(frame, face_locations)
-            
+            landmarks_list = self._face_recognition.face_landmarks(rgb, face_locations)
+
             for i, (loc, enc) in enumerate(zip(face_locations, encodings)):
                 top, right, bottom, left = loc
-                
+
                 # Estimate face angle from landmarks
                 angle = "front"
                 quality = 1.0
                 if landmarks_list and i < len(landmarks_list):
                     angle, quality = self._estimate_face_angle(landmarks_list[i])
-                
-                # Crop face for storage
+
+                # Fold sharpness into quality (sharper = more trustworthy)
+                blur_var = good_locations[i][1]
+                sharpness_factor = min(1.0, blur_var / (self.blur_threshold * 3))
+                quality = quality * (0.7 + 0.3 * sharpness_factor)
+
+                # Crop face for storage (from original BGR frame)
                 margin = 20
                 h, w = frame.shape[:2]
                 crop = frame[
                     max(0, top - margin):min(h, bottom + margin),
                     max(0, left - margin):min(w, right + margin)
                 ]
-                
+
                 detections.append(FaceDetection(
                     bbox=(top, right, bottom, left),
                     embedding=enc,
@@ -119,7 +159,7 @@ class FaceEngine:
                     quality_score=quality,
                     cropped_image=crop
                 ))
-        
+
         return detections
 
     def _estimate_face_angle(self, landmarks: Dict) -> Tuple[str, float]:
@@ -183,17 +223,18 @@ class FaceEngine:
             best_angle = None
             
             for stored_embedding, emb_id, quality in embeddings_data:
-                # Compute euclidean distance
-                distance = np.linalg.norm(query_embedding - stored_embedding)
+                if stored_embedding.shape != query_embedding.shape:
+                    continue  # Corrupt/mismatched embedding — skip
+                # Compute euclidean distance. NOTE: previous code compared a
+                # quality-WEIGHTED distance against the raw best distance —
+                # mixing two different scales, which corrupted ranking.
+                distance = float(np.linalg.norm(query_embedding - stored_embedding))
                 
-                # Quality-weighted distance (better quality embeddings are weighted more)
-                weighted_distance = distance / max(quality, 0.1)
-                
-                if weighted_distance < best_distance:
-                    best_distance = distance  # Store raw distance for threshold
+                if distance < best_distance:
+                    best_distance = distance
                     best_embedding_id = emb_id
             
-            if best_distance <= self.tolerance:
+            if best_embedding_id is not None and best_distance <= self.tolerance:
                 score = max(0, 1.0 - (best_distance / self.tolerance))
                 matches.append(FaceMatch(
                     person_id=person_id,
@@ -230,6 +271,18 @@ class FaceEngine:
         
         logger.info(f"Loaded {len(embeddings_data)} embeddings for {len(self._embeddings_cache)} persons")
 
+    def remove_embedding_from_cache(self, person_id: str, embedding_id: str):
+        """Remove a single embedding from the in-memory cache (e.g. when the
+        DB row is deleted to make room for a better-quality sample)."""
+        entries = self._embeddings_cache.get(person_id)
+        if not entries:
+            return
+        self._embeddings_cache[person_id] = [
+            e for e in entries if e[1] != embedding_id
+        ]
+        if not self._embeddings_cache[person_id]:
+            del self._embeddings_cache[person_id]
+
     def add_embedding_to_cache(self, person_id: str, embedding: np.ndarray, 
                                 embedding_id: str, quality: float):
         """Add a new embedding to the in-memory cache."""
@@ -238,10 +291,11 @@ class FaceEngine:
         
         self._embeddings_cache[person_id].append((embedding, embedding_id, quality))
         
-        # Keep only best 5 per person (by quality)
-        if len(self._embeddings_cache[person_id]) > 5:
+        # Keep only best N per person (by quality)
+        cap = self.MAX_EMBEDDINGS_PER_PERSON
+        if len(self._embeddings_cache[person_id]) > cap:
             self._embeddings_cache[person_id].sort(key=lambda x: x[2], reverse=True)
-            self._embeddings_cache[person_id] = self._embeddings_cache[person_id][:5]
+            self._embeddings_cache[person_id] = self._embeddings_cache[person_id][:cap]
 
     def serialize_embedding(self, embedding: np.ndarray) -> bytes:
         """Convert embedding to bytes for database storage."""

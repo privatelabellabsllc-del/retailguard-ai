@@ -125,4 +125,4 @@ npm run dev
 2. **Review** → Clerk reviews clip → Marks as Theft / Not Theft / Unsure
 3. **Tracking** → If Theft: person flagged in database
 4. **Alert** → Next visit: real-time alert with previous theft video
-5. **Action** → Clerk chooses: 🚔 Call Police | 🤚 Let Go | ⛔ Blacklist
+5. **Action** → Clerk chooses: 🚔 Contact Authorities | 🤚 Let Go | ⛔ Blacklist

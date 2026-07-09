@@ -169,10 +169,25 @@ def startup():
     try:
         from app.services.stream_manager import StreamManager
         manager = StreamManager.get_instance()
-        # Schedule initialization (can't await in sync startup)
+
+        async def _init_and_autostart():
+            # Initialize AI engines, then AUTO-START pipelines for all
+            # ai_enabled cameras. Each pipeline retries RTSP with exponential
+            # backoff internally, so a down stream/tunnel is non-fatal.
+            try:
+                await manager.initialize()
+                if manager.ai_available:
+                    result = await manager.start_all()
+                    print(f"AI pipelines auto-started for {result.get('started', 0)} camera(s)")
+                else:
+                    print("AI engines unavailable — running in API-only mode")
+            except Exception as e:
+                print(f"AI auto-start error (non-fatal): {e}")
+
+        # Schedule initialization + auto-start (can't await in sync startup)
         loop = asyncio.get_event_loop()
-        loop.create_task(manager.initialize())
-        print("AI StreamManager initialization scheduled")
+        loop.create_task(_init_and_autostart())
+        print("AI StreamManager initialization + auto-start scheduled")
     except Exception as e:
         print(f"StreamManager init error (non-fatal): {e}")
 

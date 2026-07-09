@@ -18,6 +18,8 @@ Journey states:
 
 Each tracked person after concealment gets a "journey" that records every zone transition.
 """
+import asyncio
+import inspect
 import time
 import logging
 from enum import Enum
@@ -176,6 +178,29 @@ class ZoneTracker:
             t: [] for t in ZoneType
         }
 
+    @staticmethod
+    def _fire_callback(callback, *args):
+        """
+        Invoke a callback that may be sync OR async.
+        Previously async callbacks (e.g. DetectionPipeline._on_journey_classified)
+        were called synchronously, producing a never-awaited coroutine — the
+        classification silently never propagated. This schedules coroutines
+        on the running event loop.
+        """
+        if callback is None:
+            return
+        try:
+            result = callback(*args)
+            if inspect.isawaitable(result):
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(result)
+                except RuntimeError:
+                    # No running loop (e.g. unit tests) — run to completion
+                    asyncio.run(result)
+        except Exception:
+            logger.exception("Zone tracker callback failed")
+
     def add_zone(self, zone: ZoneDefinition):
         """Register a zone for tracking."""
         self.zones[zone.zone_id] = zone
@@ -285,8 +310,17 @@ class ZoneTracker:
                 elif zone.zone_type == ZoneType.EXIT:
                     self._handle_exit_zone(journey, timestamp)
 
-                if self.on_zone_alert:
-                    self.on_zone_alert(event)
+                self._fire_callback(self.on_zone_alert, event)
+
+                # Journey ends once classified at an exit — stop tracking it
+                if journey.classified_at is not None:
+                    self.active_journeys.pop(track_id, None)
+                    return
+
+        # Person is not inside any zone — reset last_zone so a later re-entry
+        # into the same zone is registered as a new "enter" event
+        if not current_zones:
+            journey.last_zone = None
 
         # Update register dwell time
         if journey.state == JourneyState.AT_REGISTER and journey.register_enter_time:
@@ -357,9 +391,8 @@ class ZoneTracker:
             f"({journey.classification_confidence:.0%}) — {journey.classification_reason}"
         )
 
-        # Fire callback
-        if self.on_theft_classified:
-            self.on_theft_classified(journey)
+        # Fire callback (handles async callbacks correctly)
+        self._fire_callback(self.on_theft_classified, journey)
 
     def check_timeouts(self, current_time: float):
         """
@@ -367,13 +400,36 @@ class ZoneTracker:
         Called periodically by the pipeline.
         """
         timed_out = []
-        for track_id, journey in self.active_journeys.items():
+        for track_id, journey in list(self.active_journeys.items()):
+            # Journey already classified (e.g. at an exit zone) — just drop it,
+            # never re-fire the callback with a stale/overwritten classification.
+            if journey.classified_at is not None:
+                timed_out.append(track_id)
+                continue
+
             elapsed = current_time - journey.last_seen
 
             if elapsed > self.exit_timeout_seconds:
                 # Person disappeared — classify based on what we know
-                if journey.state == JourneyState.TRACKING:
-                    # Never saw them at register or exit
+                if journey.state == JourneyState.AT_REGISTER:
+                    # Was at register but disappeared
+                    if journey.register_dwell_seconds >= self.register_min_dwell:
+                        journey.classification = TheftClassification.LIKELY_PAID
+                        journey.classification_confidence = 0.65
+                        journey.classification_reason = (
+                            f"Was at register for {journey.register_dwell_seconds:.0f}s "
+                            f"before losing track. Likely completed purchase."
+                        )
+                    else:
+                        journey.classification = TheftClassification.PARTIAL_THEFT
+                        journey.classification_confidence = 0.55
+                        journey.classification_reason = (
+                            f"Brief register visit ({journey.register_dwell_seconds:.0f}s) "
+                            f"before losing track — concealed item(s) may not have been scanned."
+                        )
+                else:
+                    # Never saw them at register or exit (covers TRACKING and
+                    # any other non-register state)
                     journey.classification = TheftClassification.LIKELY_THEFT
                     journey.classification_confidence = 0.55
                     journey.classification_reason = (
@@ -381,23 +437,14 @@ class ZoneTracker:
                         f"Concealed {journey.concealment_count} item(s), "
                         f"never visited register or known exit."
                     )
-                elif journey.state == JourneyState.AT_REGISTER:
-                    # Was at register but disappeared
-                    journey.classification = TheftClassification.LIKELY_PAID
-                    journey.classification_confidence = 0.65
-                    journey.classification_reason = (
-                        f"Was at register for {journey.register_dwell_seconds:.0f}s "
-                        f"before losing track. Likely completed purchase."
-                    )
 
                 journey.classified_at = current_time
                 timed_out.append(track_id)
 
-                if self.on_theft_classified:
-                    self.on_theft_classified(journey)
+                self._fire_callback(self.on_theft_classified, journey)
 
         for track_id in timed_out:
-            del self.active_journeys[track_id]
+            self.active_journeys.pop(track_id, None)
 
     def correlate_pos_transaction(
         self,

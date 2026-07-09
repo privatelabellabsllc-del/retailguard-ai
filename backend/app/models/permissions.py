@@ -24,7 +24,7 @@ AVAILABLE_FEATURES = {
     "revenue": "Revenue & Projections",
     "reports": "Reports & Export",
     "settings": "System Settings",
-    "call_police": "Call 911 Action",
+    "call_police": "Contact Authorities Action",
     "blacklist_action": "Blacklist Action",
 }
 
