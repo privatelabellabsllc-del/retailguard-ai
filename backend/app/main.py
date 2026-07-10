@@ -86,6 +86,9 @@ def _run_migrations(engine, inspector):
         ("incidents", "visited_register", "BOOLEAN DEFAULT FALSE"),
         ("incidents", "register_dwell_seconds", "FLOAT"),
         ("incidents", "concealment_count", "INTEGER DEFAULT 1"),
+        # Behavioral intelligence fields
+        ("incidents", "behavior_score", "FLOAT"),
+        ("incidents", "behavior_signals", "TEXT"),
     ]
     with engine.connect() as conn:
         for table, column, col_type in migrations:
@@ -97,6 +100,15 @@ def _run_migrations(engine, inspector):
                     print(f"  Migration: added {table}.{column}")
             except Exception as e:
                 print(f"  Migration skip {table}.{column}: {e}")
+
+        # Theft alerts can fire for unidentified persons — relax the legacy
+        # NOT NULL constraint on alerts.person_id (no-op if already nullable)
+        try:
+            conn.execute(sa_text("ALTER TABLE alerts ALTER COLUMN person_id DROP NOT NULL"))
+            conn.commit()
+            print("  Migration: alerts.person_id is now nullable")
+        except Exception as e:
+            print(f"  Migration skip alerts.person_id nullable: {e}")
 
 
 @app.on_event("startup")

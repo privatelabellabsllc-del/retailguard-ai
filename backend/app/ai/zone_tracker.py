@@ -144,6 +144,17 @@ class PersonJourney:
     pos_item_count: Optional[int] = None
     pos_total: Optional[float] = None
 
+    # Item retrieval at register (reverse of concealment: pocket → counter).
+    # A retrieval is the strongest "they paid for it" behavioral signal.
+    retrieval_detected: bool = False
+    retrieval_time: Optional[float] = None
+    retrieval_confidence: float = 0.0
+
+    # Behavioral suspicion context (from BehaviorAnalyzer). Enrichment only —
+    # never triggers a classification by itself.
+    behavior_score: float = 0.0
+    behavior_signals: Dict = field(default_factory=dict)
+
     # Timing
     created_at: float = field(default_factory=time.time)
     classified_at: Optional[float] = None
@@ -165,6 +176,8 @@ class ZoneTracker:
         on_zone_alert=None,          # Callback for zone entry/exit
         exit_timeout_seconds: float = 120.0,  # Max time to track after concealment
         register_min_dwell: float = 15.0,     # Min seconds at register to count as "paid"
+        retrieval_confidence_boost: float = 0.35,  # How strongly a retrieval pushes toward PAID
+        behavior_weight: float = 0.15,        # Mild weight of behavior score in fusion
     ):
         self.zones: Dict[str, ZoneDefinition] = {}
         self.active_journeys: Dict[str, PersonJourney] = {}  # track_id -> journey
@@ -172,6 +185,8 @@ class ZoneTracker:
         self.on_zone_alert = on_zone_alert
         self.exit_timeout_seconds = exit_timeout_seconds
         self.register_min_dwell = register_min_dwell
+        self.retrieval_confidence_boost = retrieval_confidence_boost
+        self.behavior_weight = behavior_weight
 
         # Zone lookup by type for fast access
         self._zones_by_type: Dict[ZoneType, List[ZoneDefinition]] = {
@@ -326,6 +341,101 @@ class ZoneTracker:
         if journey.state == JourneyState.AT_REGISTER and journey.register_enter_time:
             journey.register_dwell_seconds = timestamp - journey.register_enter_time
 
+    def zone_at(
+        self,
+        bbox: Tuple[int, int, int, int],
+        frame_w: int,
+        frame_h: int,
+        camera_id: str,
+        zone_type: Optional[ZoneType] = None,
+    ) -> Optional[ZoneDefinition]:
+        """
+        Return the first zone (optionally of a specific type) containing the
+        bbox center on this camera, or None. Used by the pipeline for behavior
+        observation and register-area retrieval checks.
+        """
+        candidates = self._zones_by_type[zone_type] if zone_type else self.zones.values()
+        for zone in candidates:
+            if zone.camera_id != camera_id:
+                continue
+            if zone.contains_bbox_center(bbox, frame_w, frame_h):
+                return zone
+        return None
+
+    def record_retrieval(self, track_id: str, timestamp: float, confidence: float = 1.0):
+        """
+        Record an item-retrieval gesture at the register (pocket/bag → counter).
+        This is the reverse of concealment and strongly indicates the person
+        pulled the concealed item back out to pay for it.
+        """
+        journey = self.active_journeys.get(track_id)
+        if journey is None:
+            return
+        if not journey.retrieval_detected:
+            journey.retrieval_detected = True
+            journey.retrieval_time = timestamp
+            journey.retrieval_confidence = confidence
+            logger.info(
+                f"🧾 RETRIEVAL at register: {track_id} pulled concealed item back "
+                f"out (confidence {confidence:.0%}) — leaning PAID"
+            )
+            event = ZoneEvent(
+                person_track_id=track_id,
+                zone_id="register",
+                zone_type=ZoneType.REGISTER,
+                event_type="retrieval",
+                timestamp=timestamp,
+                camera_id=journey.camera_id,
+            )
+            journey.zone_history.append(event)
+            self._fire_callback(self.on_zone_alert, event)
+
+    def set_behavior(self, track_id: str, score: float, signals: Optional[Dict] = None):
+        """Attach the latest behavioral suspicion score/signals to a journey."""
+        journey = self.active_journeys.get(track_id)
+        if journey is None:
+            return
+        journey.behavior_score = max(0.0, min(1.0, float(score)))
+        if signals:
+            journey.behavior_signals = signals
+
+    # Classifications that lean toward theft vs. paid, for confidence fusion
+    _THEFT_SIDE = (
+        TheftClassification.LIKELY_THEFT,
+        TheftClassification.PARTIAL_THEFT,
+        TheftClassification.GRAB_AND_RUN,
+    )
+    _PAID_SIDE = (
+        TheftClassification.LIKELY_PAID,
+        TheftClassification.CLEARED,
+    )
+
+    def _fuse_confidence(self, journey: PersonJourney):
+        """
+        Fuse the base journey classification confidence with behavioral
+        context. Behavior is a MILD adjustment only (never flips a class):
+          - theft-side classes: confidence rises with suspicion score
+          - paid-side classes: high suspicion mildly tempers certainty
+        Retrieval boosting is applied where the classification is decided
+        (register/exit handling), since it can flip the class itself.
+        """
+        score = journey.behavior_score
+        if score <= 0:
+            return
+        adj = 0.0
+        if journey.classification in self._THEFT_SIDE:
+            adj = self.behavior_weight * score
+        elif journey.classification in self._PAID_SIDE:
+            adj = -0.5 * self.behavior_weight * score
+        if adj:
+            journey.classification_confidence = max(
+                0.05, min(0.98, journey.classification_confidence + adj)
+            )
+            journey.classification_reason += (
+                f" Behavior score {score:.2f} "
+                f"({'raised' if adj > 0 else 'tempered'} confidence)."
+            )
+
     def _handle_register_entry(self, journey: PersonJourney, timestamp: float):
         """Person with concealment entered the register/checkout zone."""
         journey.visited_register = True
@@ -344,8 +454,21 @@ class ZoneTracker:
             # They went to register first → likely paid
             journey.state = JourneyState.EXITED_AFTER_REGISTER
 
+            if journey.retrieval_detected:
+                # They pulled the concealed item back OUT at the register —
+                # the reverse gesture of concealment. Strongest paid signal
+                # short of POS confirmation: conceal → retrieve → pay ≠ theft.
+                journey.classification = TheftClassification.LIKELY_PAID
+                journey.classification_confidence = min(
+                    0.95, 0.55 + self.retrieval_confidence_boost
+                )
+                journey.classification_reason = (
+                    f"Retrieved concealed item at register "
+                    f"(dwell {journey.register_dwell_seconds:.0f}s) before exiting. "
+                    f"Concealed-then-paid pattern — not theft."
+                )
             # Check dwell time at register
-            if journey.register_dwell_seconds >= self.register_min_dwell:
+            elif journey.register_dwell_seconds >= self.register_min_dwell:
                 journey.classification = TheftClassification.LIKELY_PAID
                 journey.classification_confidence = 0.75
                 journey.classification_reason = (
@@ -358,6 +481,7 @@ class ZoneTracker:
                 journey.classification_confidence = 0.60
                 journey.classification_reason = (
                     f"Visited register briefly ({journey.register_dwell_seconds:.0f}s) "
+                    f"with no retrieval of the concealed item "
                     f"— may not have scanned all items. "
                     f"{journey.concealment_count} concealment(s) detected."
                 )
@@ -384,6 +508,9 @@ class ZoneTracker:
                     f"Concealed {journey.concealment_count} item(s), "
                     f"never visited register, exited store after {time_to_exit:.0f}s."
                 )
+
+        # Fuse behavioral suspicion context into the final confidence
+        self._fuse_confidence(journey)
 
         journey.classified_at = timestamp
         logger.warning(
@@ -413,7 +540,17 @@ class ZoneTracker:
                 # Person disappeared — classify based on what we know
                 if journey.state == JourneyState.AT_REGISTER:
                     # Was at register but disappeared
-                    if journey.register_dwell_seconds >= self.register_min_dwell:
+                    if journey.retrieval_detected:
+                        journey.classification = TheftClassification.LIKELY_PAID
+                        journey.classification_confidence = min(
+                            0.95, 0.55 + self.retrieval_confidence_boost
+                        )
+                        journey.classification_reason = (
+                            f"Retrieved concealed item at register "
+                            f"(dwell {journey.register_dwell_seconds:.0f}s) before "
+                            f"losing track. Concealed-then-paid pattern."
+                        )
+                    elif journey.register_dwell_seconds >= self.register_min_dwell:
                         journey.classification = TheftClassification.LIKELY_PAID
                         journey.classification_confidence = 0.65
                         journey.classification_reason = (
@@ -437,6 +574,9 @@ class ZoneTracker:
                         f"Concealed {journey.concealment_count} item(s), "
                         f"never visited register or known exit."
                     )
+
+                # Fuse behavioral suspicion context into the final confidence
+                self._fuse_confidence(journey)
 
                 journey.classified_at = current_time
                 timed_out.append(track_id)

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 
 try:
@@ -627,11 +628,37 @@ class StreamManager:
                 incident.concealment_count = int(
                     getattr(journey, "concealment_count", 1) or 1
                 )
+                # Behavioral context — shown to clerks alongside the clip
+                behavior_score = float(getattr(journey, "behavior_score", 0.0) or 0.0)
+                behavior_signals = getattr(journey, "behavior_signals", None)
+                incident.behavior_score = behavior_score
+                if behavior_signals:
+                    try:
+                        incident.behavior_signals = json.dumps(behavior_signals)
+                    except (TypeError, ValueError):
+                        incident.behavior_signals = None
                 db.commit()
             
             incident_id = str(incident.id) if incident is not None else None
+            incident_person_id = (
+                str(incident.person_id)
+                if incident is not None and incident.person_id else None
+            )
             db.close()
             db = None
+            
+            # Theft-side classifications → real-time alert to the clerk AND a
+            # persistent Alert row so the Live Alerts page shows it.
+            if classification_value in ("likely_theft", "partial_theft", "grab_and_run"):
+                await self._raise_theft_alert(
+                    camera_id=camera_id,
+                    person_id=person_id or incident_person_id,
+                    incident_id=incident_id,
+                    classification_value=classification_value,
+                    confidence=confidence,
+                    reason=reason,
+                    journey=journey,
+                )
             
             await alert_manager.broadcast_alert({
                 "type": "theft_classified",
@@ -652,6 +679,97 @@ class StreamManager:
             )
         except Exception as e:
             logger.error(f"Theft classification callback error: {e}", exc_info=True)
+        finally:
+            if db is not None:
+                try:
+                    db.rollback()
+                    db.close()
+                except Exception:
+                    pass
+
+    async def _raise_theft_alert(self, camera_id, person_id, incident_id,
+                                 classification_value, confidence, reason, journey):
+        """
+        Create a persistent Alert row + broadcast a real-time WebSocket alert
+        when a journey is classified as theft (LIKELY_THEFT / PARTIAL_THEFT /
+        GRAB_AND_RUN). The clerk sees it on the Live Alerts page with the
+        evidence clip attached to the linked incident. Guidance shown to
+        clerks is always "Contact Authorities" — never anything else.
+        """
+        db = None
+        try:
+            import uuid
+            from app.models.alert import Alert, AlertType, AlertPriority
+            from app.api.alerts import alert_manager
+            
+            if classification_value == "partial_theft":
+                title = "🟠 PARTIAL THEFT SUSPECTED"
+                priority = AlertPriority.HIGH
+                summary = (
+                    "Paid at register but concealed item(s) were likely NOT scanned."
+                )
+            elif classification_value == "grab_and_run":
+                title = "🔴 GRAB-AND-RUN THEFT"
+                priority = AlertPriority.CRITICAL
+                summary = "Concealed item(s) and ran out without paying."
+            else:
+                title = "🔴 LIKELY THEFT — LEFT WITHOUT PAYING"
+                priority = AlertPriority.CRITICAL
+                summary = "Concealed item(s) and exited without visiting the register."
+            
+            behavior_score = float(getattr(journey, "behavior_score", 0.0) or 0.0)
+            message = (
+                f"{summary} Confidence {confidence:.0%}. {reason} "
+                f"Evidence clip is in the review queue. "
+                f"Recommended: review clip, then Confront or Contact Authorities."
+            )
+            
+            db = SessionLocal()
+            alert = Alert(
+                person_id=uuid.UUID(person_id) if person_id else None,
+                alert_type=AlertType.ACTIVE_THEFT,
+                priority=priority,
+                title=title,
+                message=message,
+                camera_id=uuid.UUID(camera_id) if camera_id else None,
+                current_camera_id=uuid.UUID(camera_id) if camera_id else None,
+                tracking_active=False,
+                reference_incident_id=uuid.UUID(incident_id) if incident_id else None,
+                match_confidence=confidence,
+                match_details={
+                    "classification": classification_value,
+                    "behavior_score": behavior_score,
+                    "behavior_signals": getattr(journey, "behavior_signals", None) or {},
+                    "retrieval_detected": bool(getattr(journey, "retrieval_detected", False)),
+                },
+            )
+            db.add(alert)
+            db.commit()
+            db.refresh(alert)
+            alert_id = str(alert.id)
+            db.close()
+            db = None
+            
+            await alert_manager.broadcast_alert({
+                "type": "new_alert",
+                "alert": {
+                    "id": alert_id,
+                    "alert_type": AlertType.ACTIVE_THEFT.value,
+                    "priority": priority.value,
+                    "title": title,
+                    "message": message,
+                    "person_id": person_id,
+                    "camera_id": camera_id,
+                    "incident_id": incident_id,
+                    "classification": classification_value,
+                    "match_confidence": confidence,
+                    "behavior_score": behavior_score,
+                    "tracking_active": False,
+                }
+            })
+            logger.warning(f"THEFT ALERT raised: {title} ({classification_value}, {confidence:.0%})")
+        except Exception as e:
+            logger.error(f"Theft alert error: {e}", exc_info=True)
         finally:
             if db is not None:
                 try:

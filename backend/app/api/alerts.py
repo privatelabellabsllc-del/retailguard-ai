@@ -362,7 +362,7 @@ def _format_alert(alert: Alert) -> AlertResponse:
     return AlertResponse(
         id=str(alert.id),
         created_at=alert.created_at,
-        person_id=str(alert.person_id),
+        person_id=str(alert.person_id) if alert.person_id else "",
         person_display_name=person.display_name if person else None,
         person_status=person.status.value if person else "unknown",
         person_threat_level=person.threat_level if person else 0,

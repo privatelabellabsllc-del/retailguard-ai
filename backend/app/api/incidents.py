@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc, func
 from pydantic import BaseModel
 from typing import Optional, List
+import json
 import uuid
 
 from app.database import get_db
@@ -43,11 +44,26 @@ class IncidentResponse(BaseModel):
     visited_register: bool = False
     register_dwell_seconds: Optional[float] = None
     concealment_count: int = 1
+    behavior_score: Optional[float] = None
+    behavior_signals: Optional[dict] = None
     clips: List[dict] = []
     detection_details: Optional[dict] = None
     
     class Config:
         from_attributes = True
+
+
+def _parse_behavior_signals(raw) -> Optional[dict]:
+    """behavior_signals is stored as a JSON string — parse defensively."""
+    if raw is None:
+        return None
+    if isinstance(raw, dict):
+        return raw
+    try:
+        parsed = json.loads(raw)
+        return parsed if isinstance(parsed, dict) else None
+    except (ValueError, TypeError):
+        return None
 
 
 class ReviewAction(BaseModel):
@@ -121,6 +137,8 @@ async def list_incidents(
             visited_register=inc.visited_register or False,
             register_dwell_seconds=inc.register_dwell_seconds,
             concealment_count=inc.concealment_count or 1,
+            behavior_score=inc.behavior_score,
+            behavior_signals=_parse_behavior_signals(inc.behavior_signals),
             clips=clips_data,
             detection_details=inc.detection_details,
         ))
@@ -212,6 +230,8 @@ async def get_incident(
         visited_register=incident.visited_register or False,
         register_dwell_seconds=incident.register_dwell_seconds,
         concealment_count=incident.concealment_count or 1,
+        behavior_score=incident.behavior_score,
+        behavior_signals=_parse_behavior_signals(incident.behavior_signals),
         clips=clips_data,
         detection_details=incident.detection_details,
     )

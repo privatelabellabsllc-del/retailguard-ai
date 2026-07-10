@@ -78,6 +78,11 @@ class Incident(Base):
     visited_register = Column(Boolean, default=False)
     register_dwell_seconds = Column(Float, nullable=True)
     concealment_count = Column(Integer, default=1)
+
+    # Behavioral context (from BehaviorAnalyzer) — enrichment shown to clerks,
+    # never a trigger by itself
+    behavior_score = Column(Float, nullable=True)      # 0-1 suspicion score
+    behavior_signals = Column(Text, nullable=True)     # JSON: loitering, repeat passes, etc.
     
     # AI Detection Details
     ai_confidence = Column(Float, nullable=False)  # 0-1

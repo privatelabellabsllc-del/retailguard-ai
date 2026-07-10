@@ -75,6 +75,20 @@ class ConcealmentEvent:
     details: Dict = field(default_factory=dict)
 
 
+@dataclass
+class RetrievalEvent:
+    """
+    The REVERSE of concealment: at the register, the hand goes to the
+    pocket/bag/waistband and comes back out toward counter level — the person
+    is pulling the concealed item out to pay for it. Strong PAID signal.
+    """
+    confidence: float                     # 0-1
+    timestamp: float
+    hand_used: str                        # "left" or "right"
+    description: str
+    details: Dict = field(default_factory=dict)
+
+
 # MediaPipe Pose landmark indices
 POSE_LANDMARKS = {
     "nose": 0, "left_eye": 2, "right_eye": 5,
@@ -122,6 +136,7 @@ class ConcealmentDetector:
         self._active_tracks: Dict[str, deque] = {}  # person_id -> pose history
         self._pending_counts: Dict[str, int] = {}   # person_id -> consecutive positive analyses
         self._last_event_time: Dict[str, float] = {}  # person_id -> last fired event time
+        self._last_retrieval_time: Dict[str, float] = {}  # person_id -> last retrieval event
         self._shelf_regions: List[Dict] = []  # Configured shelf regions
         self._initialized = False
 
@@ -462,6 +477,149 @@ class ConcealmentDetector:
             details=signals,
         )
 
+    def detect_retrieval(
+        self, person_id: str, timestamp: float, cooldown: float = 15.0
+    ) -> Optional["RetrievalEvent"]:
+        """
+        Detect the reverse gesture of concealment for a person at the REGISTER:
+        hand goes DOWN to pocket/bag/waistband level → hand comes back UP and
+        out toward counter (between hip and shoulder) — i.e. the person pulled
+        the concealed item back out to pay.
+
+        Uses the same pose history buffer as concealment analysis. Call this
+        only while the tracked person is inside a register zone; the pipeline
+        gates on that.
+        """
+        frames = list(self._active_tracks.get(person_id, []))
+        if len(frames) < 10:
+            return None
+
+        # Per-track cooldown so a single gesture doesn't re-fire every frame
+        if timestamp - self._last_retrieval_time.get(person_id, 0.0) < cooldown:
+            return None
+
+        # Analyze the last ~4 seconds of pose history
+        recent = frames[-24:] if len(frames) >= 24 else frames
+
+        best_event: Optional[RetrievalEvent] = None
+        for hand in ("right", "left"):
+            event = self._check_hand_retrieval(recent, hand)
+            if event and (best_event is None or event.confidence > best_event.confidence):
+                best_event = event
+
+        if best_event is None or best_event.confidence < 0.6:
+            return None
+
+        self._last_retrieval_time[person_id] = timestamp
+        best_event.timestamp = timestamp
+        return best_event
+
+    def _check_hand_retrieval(
+        self, frames: List[PoseFrame], hand: str
+    ) -> Optional["RetrievalEvent"]:
+        """
+        Signals (mirror of concealment):
+          1. Hand near hip/pocket region (reaching into concealment spot)
+          2. Hand then RISES to counter level (between hip and shoulder)
+          3. Hand state transitions toward HOLDING_ITEM (item back in hand)
+          4. Motion happens in a plausible 0.2–4s window
+        """
+        wrist_key = f"{hand}_wrist"
+        hip_key = f"{hand}_hip"
+        shoulder_key = f"{hand}_shoulder"
+
+        trajectory = []   # (wx, wy, timestamp, frames_idx)
+        hand_states = []
+        for fi, f in enumerate(frames):
+            if wrist_key in f.keypoints:
+                wx, wy, vis = f.keypoints[wrist_key]
+                if vis > 0.5:
+                    trajectory.append((wx, wy, f.timestamp, fi))
+                    state = f.left_hand_state if hand == "left" else f.right_hand_state
+                    hand_states.append(state)
+
+        if len(trajectory) < 8:
+            return None
+
+        # === SIGNAL 1: hand dips to pocket/waistband region ===
+        pocket_idx = None
+        for i, (wx, wy, ts, fi) in enumerate(trajectory):
+            src = frames[fi]
+            if hip_key in src.keypoints:
+                hx, hy, _ = src.keypoints[hip_key]
+                if np.sqrt((wx - hx) ** 2 + (wy - hy) ** 2) < 60:
+                    pocket_idx = i
+                    break
+        if pocket_idx is None:
+            return None
+
+        # === SIGNAL 2: hand rises back to counter level afterward ===
+        rise_idx = None
+        for i in range(pocket_idx + 1, len(trajectory)):
+            src = frames[trajectory[i][3]]
+            if hip_key in src.keypoints and shoulder_key in src.keypoints:
+                hip_y = src.keypoints[hip_key][1]
+                shoulder_y = src.keypoints[shoulder_key][1]
+                hand_y = trajectory[i][1]
+                # Counter level ≈ upper-half between hip and shoulder
+                counter_y = hip_y - 0.35 * abs(hip_y - shoulder_y)
+                if hand_y < counter_y:
+                    rise_idx = i
+                    break
+        if rise_idx is None:
+            return None
+
+        # === SIGNAL 3: hand state transition toward HOLDING_ITEM ===
+        holding_transition = False
+        for i in range(pocket_idx + 1, len(hand_states)):
+            if (hand_states[i] == HandState.HOLDING_ITEM
+                    and hand_states[i - 1] != HandState.HOLDING_ITEM):
+                holding_transition = True
+                break
+
+        # === SIGNAL 4: plausible gesture duration ===
+        duration = trajectory[rise_idx][2] - trajectory[pocket_idx][2]
+        plausible_timing = 0.2 < duration < 4.0
+
+        confidence = 0.40 + 0.20  # pocket dip + rise to counter (both required)
+        if holding_transition:
+            confidence += 0.25
+        if plausible_timing:
+            confidence += 0.10
+        confidence = min(1.0, confidence)
+
+        description = (
+            f"Subject reached into pocket/bag area with {hand} hand and brought "
+            f"hand back up to counter level"
+            + (", item visible in hand" if holding_transition else "")
+            + f". Retrieval gesture at register (confidence: {confidence:.0%})"
+        )
+
+        return RetrievalEvent(
+            confidence=confidence,
+            timestamp=trajectory[rise_idx][2],
+            hand_used=hand,
+            description=description,
+            details={
+                "pocket_dip": True,
+                "rise_to_counter": True,
+                "holding_transition": holding_transition,
+                "plausible_timing": plausible_timing,
+                "duration_seconds": round(duration, 2),
+            },
+        )
+
+    def get_latest_pose(self, person_id: str) -> Optional[Dict]:
+        """
+        Latest pose keypoints for a tracked person (name -> (x, y, visibility)),
+        or None. Used by BehaviorAnalyzer for head-scanning; degrades
+        gracefully when pose data is unavailable.
+        """
+        track = self._active_tracks.get(person_id)
+        if not track:
+            return None
+        return track[-1].keypoints
+
     def _generate_description(
         self, hand: str, concealment_type: Optional[ConcealmentType],
         signals: Dict, confidence: float
@@ -508,6 +666,7 @@ class ConcealmentDetector:
         self._active_tracks.pop(person_id, None)
         self._pending_counts.pop(person_id, None)
         self._last_event_time.pop(person_id, None)
+        self._last_retrieval_time.pop(person_id, None)
 
     def get_active_track_count(self) -> int:
         return len(self._active_tracks)

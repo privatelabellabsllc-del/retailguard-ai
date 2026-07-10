@@ -49,6 +49,12 @@ class Settings(BaseSettings):
     CLIP_POST_SECONDS: int = 20  # Seconds after event to include in clip
     CLIP_MAX_SECONDS: int = 30  # Max clip duration
 
+    # Behavioral intelligence (BehaviorAnalyzer + classification fusion)
+    LOITER_SECONDS: float = 120.0        # Dwell in one non-register zone before "loitering"
+    REPEAT_ZONE_THRESHOLD: int = 3       # Re-entries into same zone to flag "repeated passes"
+    RETRIEVAL_CONFIDENCE_BOOST: float = 0.35  # Paid-confidence boost when item retrieved at register
+    BEHAVIOR_WEIGHT: float = 0.15        # Mild weight of behavior score in classification fusion
+
     # Stream processing (source cameras are 4K — downscale + subsample before AI)
     ANALYZE_FPS: float = 5.0    # Target analysis rate (frames/sec fed to AI)
     ANALYZE_WIDTH: int = 960    # Downscale frames to this width before AI processing

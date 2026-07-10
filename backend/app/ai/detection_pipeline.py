@@ -30,7 +30,8 @@ from dataclasses import dataclass
 from app.ai.face_engine import FaceEngine, FaceDetection
 from app.ai.concealment_detector import ConcealmentDetector, ConcealmentEvent
 from app.ai.identity_matcher import IdentityMatcher, IdentityMatch
-from app.ai.zone_tracker import ZoneTracker, ZoneDefinition, TheftClassification, PersonJourney
+from app.ai.zone_tracker import ZoneTracker, ZoneDefinition, ZoneType, TheftClassification, PersonJourney
+from app.ai.behavior_analyzer import BehaviorAnalyzer
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -94,7 +95,17 @@ class DetectionPipeline:
         self.face_engine = face_engine
         self.concealment_detector = concealment_detector
         self.identity_matcher = identity_matcher
-        self.zone_tracker = zone_tracker or ZoneTracker()
+        self.zone_tracker = zone_tracker or ZoneTracker(
+            retrieval_confidence_boost=getattr(settings, "RETRIEVAL_CONFIDENCE_BOOST", 0.35),
+            behavior_weight=getattr(settings, "BEHAVIOR_WEIGHT", 0.15),
+        )
+
+        # Behavioral suspicion scoring (loitering, repeat passes, head
+        # scanning, grab-and-run). Context only — never fires incidents alone.
+        self.behavior_analyzer = BehaviorAnalyzer(
+            loiter_seconds=getattr(settings, "LOITER_SECONDS", 120.0),
+            repeat_zone_threshold=getattr(settings, "REPEAT_ZONE_THRESHOLD", 3),
+        )
         
         self.on_alert = on_alert_callback
         self.on_incident = on_incident_callback
@@ -356,7 +367,8 @@ class DetectionPipeline:
         # === STEP 4: Zone Tracking (for persons with active journeys) ===
         if self.frame_count % self.zone_check_interval == 0:
             for track_id, person in self.tracked_persons.items():
-                if self.zone_tracker.get_journey(track_id):
+                journey = self.zone_tracker.get_journey(track_id)
+                if journey:
                     self.zone_tracker.update_position(
                         track_id=track_id,
                         bbox=person.bbox,
@@ -365,13 +377,83 @@ class DetectionPipeline:
                         timestamp=timestamp,
                         camera_id=self.camera_id,
                     )
-        
+
+        # === STEP 5: Behavior analysis + register retrieval detection ===
+        if self.frame_count % self.zone_check_interval == 0:
+            self._update_behavior_and_retrieval(timestamp)
+
         # Check journey timeouts periodically
         if self.frame_count % self.timeout_check_interval == 0:
             self.zone_tracker.check_timeouts(timestamp)
         
         # Clean up stale tracks
         self._cleanup_tracks(timestamp)
+
+    def _update_behavior_and_retrieval(self, timestamp: float):
+        """
+        Per-frame behavioral intelligence:
+        1. Feed every tracked person's current zone + pose to the
+           BehaviorAnalyzer (loitering / repeat passes / head-scanning run for
+           ALL shoppers, since suspicious behavior starts before concealment).
+        2. For persons with an active journey standing in a REGISTER zone,
+           run item-RETRIEVAL detection (pocket → counter, the reverse of
+           concealment). A retrieval flips the journey strongly toward PAID.
+        3. Keep each journey's behavior score/signals current so they are
+           fused into the classification the moment it is decided.
+        """
+        for track_id, person in self.tracked_persons.items():
+            # --- Zone observation (all tracked persons) ---
+            zone = None
+            try:
+                zone = self.zone_tracker.zone_at(
+                    person.bbox, self.frame_width, self.frame_height, self.camera_id
+                )
+            except Exception:
+                pass
+            self.behavior_analyzer.observe_zone(
+                track_id,
+                zone.zone_id if zone else None,
+                zone.zone_type.value if zone else None,
+                timestamp,
+            )
+            if zone and zone.zone_type == ZoneType.EXIT:
+                self.behavior_analyzer.note_exit(track_id, timestamp)
+
+            # --- Head-scanning from pose landmarks (graceful if absent) ---
+            try:
+                keypoints = self.concealment_detector.get_latest_pose(track_id)
+            except Exception:
+                keypoints = None
+            if keypoints:
+                self.behavior_analyzer.observe_pose(track_id, keypoints, timestamp)
+
+            # --- Journey enrichment + retrieval at register ---
+            journey = self.zone_tracker.get_journey(track_id)
+            if journey is None:
+                continue
+
+            score, signals = self.behavior_analyzer.compute(track_id, now=timestamp)
+            self.zone_tracker.set_behavior(track_id, score, signals)
+
+            if (
+                zone is not None
+                and zone.zone_type == ZoneType.REGISTER
+                and not journey.retrieval_detected
+            ):
+                try:
+                    retrieval = self.concealment_detector.detect_retrieval(
+                        track_id, timestamp
+                    )
+                except Exception:
+                    logger.exception("Retrieval detection error (continuing)")
+                    retrieval = None
+                if retrieval:
+                    logger.info(
+                        f"Retrieval gesture at register: {retrieval.description}"
+                    )
+                    self.zone_tracker.record_retrieval(
+                        track_id, timestamp, retrieval.confidence
+                    )
 
     def _detect_persons(self, frame: np.ndarray) -> List[Tuple[int, int, int, int]]:
         """
@@ -492,6 +574,9 @@ class DetectionPipeline:
             f"(track={person.track_id}, confidence={event.confidence:.0%})"
         )
         
+        # Feed behavior analyzer (enables grab-and-run signal)
+        self.behavior_analyzer.note_concealment(person.track_id, timestamp)
+
         # Start zone-based journey tracking for this person
         self.zone_tracker.start_journey(
             track_id=person.track_id,
@@ -560,6 +645,7 @@ class DetectionPipeline:
         ]
         for tid in stale:
             self.concealment_detector.clear_track(tid)
+            self.behavior_analyzer.clear_track(tid)
             del self.tracked_persons[tid]
 
     async def _on_journey_classified(self, journey: PersonJourney):
@@ -568,6 +654,16 @@ class DetectionPipeline:
             f"Journey classified: {journey.track_id} → "
             f"{journey.classification.value} ({journey.classification_confidence:.0%})"
         )
+        
+        # For theft-side classifications, finalize the evidence clip NOW so it
+        # covers everything up to the exit and attaches to the incident
+        # immediately (instead of waiting for the max-duration timer).
+        if journey.classification in (
+            TheftClassification.LIKELY_THEFT,
+            TheftClassification.PARTIAL_THEFT,
+            TheftClassification.GRAB_AND_RUN,
+        ):
+            await self._finalize_clip(journey.track_id)
         
         if self.on_theft_classified:
             await self.on_theft_classified(
@@ -579,6 +675,23 @@ class DetectionPipeline:
                 reason=journey.classification_reason,
                 journey=journey,
             )
+
+    async def _finalize_clip(self, track_id: str):
+        """
+        Immediately complete and hand off an in-progress evidence clip for a
+        track (e.g. the moment a theft classification lands at the exit).
+        Safe no-op if there is no active clip for the track.
+        """
+        clip = self.active_clips.get(track_id)
+        if clip is None or clip.completed:
+            return
+        clip.completed = True
+        self.active_clips.pop(track_id, None)
+        if clip.frames and self.on_clip_ready:
+            try:
+                await self.on_clip_ready(clip)
+            except Exception:
+                logger.exception("Clip finalize handoff failed")
 
     def stop(self):
         """Stop the pipeline."""

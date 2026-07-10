@@ -51,8 +51,9 @@ class Alert(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     
-    # Who triggered the alert
-    person_id = Column(UUID(as_uuid=True), ForeignKey("persons.id"), nullable=False, index=True)
+    # Who triggered the alert (nullable — theft alerts can fire for
+    # unidentified persons before any face match exists)
+    person_id = Column(UUID(as_uuid=True), ForeignKey("persons.id"), nullable=True, index=True)
     
     # Alert type and priority
     alert_type = Column(SAEnum(AlertType), nullable=False, index=True)
