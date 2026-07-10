@@ -39,7 +39,7 @@ export default function PersonDetailPage() {
   );
 
   const statusConfig = {
-    blacklisted: { bg: 'bg-red-500/15', text: 'text-red-400', label: 'Blacklisted' },
+    blacklisted: { bg: 'bg-red-500/15', text: 'text-red-400', label: 'Banned' },
     thief: { bg: 'bg-amber-500/15', text: 'text-amber-500', label: 'Confirmed Thief' },
     suspected: { bg: 'bg-amber-500/15', text: 'text-amber-500', label: 'Suspected' },
     known: { bg: 'bg-blue-500/15', text: 'text-blue-500', label: 'Known Visitor' },
@@ -255,7 +255,7 @@ export default function PersonDetailPage() {
         {person.status !== 'blacklisted' && (
           <button
             onClick={async () => {
-              if (confirm('Blacklist this person?')) {
+              if (confirm('Ban this person from your store?')) {
                 await blacklistPerson(person.id);
                 setPerson({ ...person, status: 'blacklisted', threat_level: 4 });
               }
@@ -265,7 +265,7 @@ export default function PersonDetailPage() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
             </svg>
-            Blacklist
+            Ban This Person
           </button>
         )}
         {person.status === 'blacklisted' && (
@@ -278,7 +278,7 @@ export default function PersonDetailPage() {
             }}
             className="px-4 py-2 text-sm font-medium rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all duration-200"
           >
-            Remove from Blacklist
+            Remove Ban
           </button>
         )}
       </div>

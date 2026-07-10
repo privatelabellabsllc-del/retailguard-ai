@@ -95,7 +95,7 @@ const BlacklistPage: React.FC = () => {
       <div className="bg-gradient-to-br from-red-500/10 via-rose-500/5 to-transparent border border-gray-200/50 rounded-2xl p-5 md:p-8 lg:p-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Blacklist</h1>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Banned People</h1>
             <p className="text-base text-[#86868B] leading-relaxed">Permanently banned individuals. AI auto-detects these people the moment they enter your store and triggers an immediate alert.</p>
           </div>
           <button
@@ -113,7 +113,7 @@ const BlacklistPage: React.FC = () => {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
-          label="Total Blacklisted"
+          label="People Banned"
           value={persons.length}
           color="bg-red-500/10"
           icon={
@@ -215,7 +215,7 @@ const BlacklistPage: React.FC = () => {
                   <span className="text-red-500 font-medium">{person.total_confirmed_thefts || 0}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-[#86868B]">Total Incidents</span>
+                  <span className="text-[#86868B]">Suspicious Activity</span>
                   <span className="text-[#636366]">{person.total_incidents || 0}</span>
                 </div>
                 <div className="flex justify-between text-xs">
@@ -255,7 +255,7 @@ const BlacklistPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0" onClick={() => setShowAddModal(false)} />
           <div className="relative bg-white border border-gray-200/50 rounded-2xl shadow-xl max-w-md w-full p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-1">Add to Blacklist</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">Ban Someone</h2>
             <p className="text-xs text-[#86868B] mb-5">Search by person ID to add to the blacklist</p>
 
             <form onSubmit={handleAdd} className="space-y-4">
@@ -293,7 +293,7 @@ const BlacklistPage: React.FC = () => {
                   disabled={addLoading}
                   className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl bg-red-500 hover:bg-red-400 text-white transition-all duration-200 disabled:opacity-50"
                 >
-                  {addLoading ? 'Adding...' : 'Blacklist'}
+                  {addLoading ? 'Adding...' : 'Ban This Person'}
                 </button>
               </div>
             </form>

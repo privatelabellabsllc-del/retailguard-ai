@@ -102,13 +102,13 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
                     alert.person_status === 'blacklisted' ? 'badge-danger' :
                     alert.person_status === 'thief' ? 'badge-warning' : 'badge-info'
                   }`}>
-                    {alert.person_status === 'blacklisted' ? '⛔ BLACKLISTED' :
-                     alert.person_status === 'thief' ? '⚠️ CONFIRMED THIEF' :
-                     '👁️ PERSON OF INTEREST'}
+                    {alert.person_status === 'blacklisted' ? 'BANNED FROM STORE' :
+                     alert.person_status === 'thief' ? 'HAS STOLEN BEFORE' :
+                     'PERSON TO WATCH'}
                   </span>
                 </div>
                 <p className={`text-sm font-medium ${threatColor}`}>
-                  Threat Level: {'🔴'.repeat(alert.person_threat_level)}{'⚪'.repeat(4 - alert.person_threat_level)}
+                  Risk level: {alert.person_threat_level} of 4
                 </p>
                 <p className="text-sm text-gray-500">
                   {alert.person_total_thefts} confirmed theft{alert.person_total_thefts !== 1 ? 's' : ''}
@@ -214,10 +214,10 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
               <button
                 onClick={() => handleAction('call_police')}
                 disabled={actionLoading !== null}
-                className="flex items-center gap-3 w-full bg-red-600 hover:bg-red-700 text-gray-900 px-4 py-3 rounded-lg font-bold text-base transition-colors disabled:opacity-50"
+                className="flex items-center gap-3 w-full bg-red-600 hover:bg-red-700 text-gray-900 px-4 min-h-[52px] rounded-lg font-bold text-base transition-colors disabled:opacity-50"
               >
                 <Phone className="w-5 h-5" />
-                🚔 Contact Authorities
+                Contact Authorities
                 <Shield className="w-5 h-5 ml-auto" />
               </button>
 
@@ -225,20 +225,20 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
               <button
                 onClick={() => handleAction('let_go')}
                 disabled={actionLoading !== null}
-                className="flex items-center gap-3 w-full bg-gray-200 hover:bg-gray-600 text-gray-900 px-4 py-3 rounded-lg font-medium text-base transition-colors disabled:opacity-50"
+                className="flex items-center gap-3 w-full bg-gray-200 hover:bg-gray-600 text-gray-900 px-4 min-h-[52px] rounded-lg font-medium text-base transition-colors disabled:opacity-50"
               >
                 <HandMetal className="w-5 h-5" />
-                🤚 Let Them Go
+                Let Them Go
               </button>
 
               {/* ⛔ BLACKLIST */}
               <button
                 onClick={() => handleAction('blacklist')}
                 disabled={actionLoading !== null}
-                className="flex items-center gap-3 w-full bg-orange-600 hover:bg-orange-700 text-gray-900 px-4 py-3 rounded-lg font-bold text-base transition-colors disabled:opacity-50"
+                className="flex items-center gap-3 w-full bg-orange-600 hover:bg-orange-700 text-gray-900 px-4 min-h-[52px] rounded-lg font-bold text-base transition-colors disabled:opacity-50"
               >
                 <Ban className="w-5 h-5" />
-                ⛔ Blacklist This Person
+                Ban This Person
               </button>
             </div>
 
@@ -303,7 +303,7 @@ export default function AlertPanel({ alert, onClose, onAction }: AlertPanelProps
               }}
               className="block w-full bg-red-600 hover:bg-red-700 text-white text-xl font-bold py-4 rounded-xl mb-3 transition-colors"
             >
-              🚔 Log as Authorities Contacted
+              Log as Authorities Contacted
             </button>
             <button
               onClick={() => setShowAuthorities(false)}

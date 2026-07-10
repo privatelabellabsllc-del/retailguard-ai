@@ -5,6 +5,7 @@
 import { useState, useMemo, useCallback, useEffect, type ReactNode } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import type { User } from '../types';
+import { alerts as alertsApi } from '../services/api';
 
 // ─── SVG Icon Components ─────────────────────
 
@@ -201,56 +202,54 @@ interface NavSection {
 
 const navSections: NavSection[] = [
   {
-    title: 'SECURITY',
-    key: 'security',
+    title: 'WATCH',
+    key: 'watch',
     collapsible: false,
     items: [
       { label: 'Dashboard', path: '/dashboard', icon: 'home' },
-      { label: 'Live Monitor', path: '/monitor', icon: 'camera', featureKey: 'cameras' },
-      { label: 'Review Queue', path: '/incidents', icon: 'search', featureKey: 'incidents' },
+      { label: 'Live Cameras', path: '/monitor', icon: 'camera', featureKey: 'cameras' },
       { label: 'Live Alerts', path: '/alerts', icon: 'bell', featureKey: 'alerts' },
-      { label: 'Offenders', path: '/persons', icon: 'user', featureKey: 'persons' },
-      { label: 'Blacklist', path: '/blacklist', icon: 'ban', featureKey: 'blacklist' },
     ],
   },
   {
-    title: 'INTELLIGENCE',
-    key: 'intelligence',
+    title: 'REVIEW',
+    key: 'review',
+    collapsible: true,
+    items: [
+      { label: 'Needs Your Review', path: '/incidents', icon: 'search', featureKey: 'incidents' },
+      { label: 'Offenders', path: '/persons', icon: 'user', featureKey: 'persons' },
+      { label: 'Banned People', path: '/blacklist', icon: 'ban', featureKey: 'blacklist' },
+    ],
+  },
+  {
+    title: 'MY STORE',
+    key: 'mystore',
     collapsible: true,
     items: [
       { label: 'Traffic', path: '/traffic', icon: 'chart', featureKey: 'traffic' },
       { label: 'Calendar', path: '/calendar', icon: 'calendar', featureKey: 'calendar' },
-      { label: 'Heatmap', path: '/heatmap', icon: 'map', featureKey: 'heatmap' },
+      { label: 'Revenue', path: '/revenue', icon: 'dollar', featureKey: 'revenue' },
       { label: 'Shelves', path: '/shelves', icon: 'shelves', featureKey: 'shelves' },
-      { label: 'Fridge', path: '/fridge', icon: 'snowflake', featureKey: 'fridge' },
+      { label: 'Heatmap', path: '/heatmap', icon: 'map', featureKey: 'heatmap' },
+      { label: 'Scanner', path: '/scanner', icon: 'phone', featureKey: 'scanner' },
+      { label: 'Cash', path: '/cash', icon: 'money', featureKey: 'cash' },
     ],
   },
   {
-    title: 'OPERATIONS',
-    key: 'operations',
+    title: 'TEAM',
+    key: 'team',
     collapsible: true,
     items: [
       { label: 'Team', path: '/team', icon: 'users', featureKey: 'team' },
-      { label: 'Cash Management', path: '/cash', icon: 'money', featureKey: 'cash' },
-      { label: 'Store Scanner', path: '/scanner', icon: 'phone', featureKey: 'scanner' },
+      { label: 'Performance', path: '/performance', icon: 'trending', featureKey: 'team' },
     ],
   },
   {
-    title: 'ANALYTICS',
-    key: 'analytics',
-    collapsible: true,
-    items: [
-      { label: 'Revenue', path: '/revenue', icon: 'dollar', featureKey: 'revenue' },
-      { label: 'Projections', path: '/projections', icon: 'trending', featureKey: 'projections' },
-      { label: 'Reports', path: '/reports', icon: 'clipboard', featureKey: 'reports' },
-    ],
-  },
-  {
-    title: 'SYSTEM',
-    key: 'system',
+    title: 'SETTINGS',
+    key: 'settings',
     collapsible: false,
     items: [
-      { label: 'Cameras', path: '/cameras', icon: 'camera', featureKey: 'cameras' },
+      { label: 'Camera Setup', path: '/cameras', icon: 'camera', featureKey: 'cameras' },
       { label: 'Settings', path: '/settings', icon: 'cog' },
     ],
   },
@@ -309,9 +308,30 @@ export default function Layout() {
   }, [location.pathname]);
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    security: true,
-    system: true,
+    watch: true,
+    review: true,
+    settings: true,
   });
+
+  // Active alert count for the mobile tab-bar badge
+  const [alertCount, setAlertCount] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const fetchAlerts = async () => {
+      try {
+        const data = await alertsApi.list();
+        if (!cancelled && Array.isArray(data)) setAlertCount(data.length);
+      } catch {
+        /* keep last known count */
+      }
+    };
+    fetchAlerts();
+    const timer = setInterval(fetchAlerts, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
 
   const toggleSection = useCallback((key: string) => {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -545,15 +565,6 @@ export default function Layout() {
           "
         >
           <div className="flex items-center gap-3">
-            {/* Hamburger — mobile only */}
-            <button
-              onClick={() => setMobileOpen(true)}
-              className="md:hidden w-9 h-9 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-            >
-              <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-              </svg>
-            </button>
             <h1 className="text-[17px] md:text-[20px] font-semibold text-gray-900 tracking-tight">
               {pageTitle}
             </h1>
@@ -602,9 +613,57 @@ export default function Layout() {
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50/50">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50/50 pb-20 md:pb-0">
           <Outlet />
         </div>
+
+        {/* ── Mobile Bottom Tab Bar ──────────── */}
+        <nav
+          className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-t border-gray-200 flex items-stretch justify-around"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          {[
+            { label: 'Home', path: '/dashboard', icon: 'home' },
+            { label: 'Cameras', path: '/monitor', icon: 'camera' },
+            { label: 'Alerts', path: '/alerts', icon: 'bell', badge: alertCount },
+            { label: 'Review', path: '/incidents', icon: 'search' },
+          ].map((tab) => {
+            const isActive =
+              tab.path === '/dashboard'
+                ? location.pathname === '/dashboard' || location.pathname === '/'
+                : location.pathname.startsWith(tab.path);
+            const TabIcon = iconMap[tab.icon];
+            return (
+              <Link
+                key={tab.path}
+                to={tab.path}
+                className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[56px] transition-colors ${
+                  isActive ? 'text-blue-600' : 'text-gray-400'
+                }`}
+              >
+                <span className="relative">
+                  {TabIcon ? <TabIcon /> : null}
+                  {tab.badge != null && tab.badge > 0 && (
+                    <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                      {tab.badge > 9 ? '9+' : tab.badge}
+                    </span>
+                  )}
+                </span>
+                <span className="text-[10px] font-medium">{tab.label}</span>
+              </Link>
+            );
+          })}
+          {/* More — opens the full menu */}
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="relative flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[56px] text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM18.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+            </svg>
+            <span className="text-[10px] font-medium">More</span>
+          </button>
+        </nav>
       </main>
     </div>
   );

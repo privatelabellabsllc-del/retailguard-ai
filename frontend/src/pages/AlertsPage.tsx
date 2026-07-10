@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { alerts as alertsApi, persons as personsApi } from '../services/api';
+import { classificationLabel, confidenceLabel, plainEnglish } from '../utils/labels';
 
 /* ─── Types ─── */
 interface AlertItem {
@@ -128,20 +129,11 @@ const offenderConfig = {
   },
 };
 
-const classificationConfig: Record<string, { label: string; color: string; bg: string }> = {
-  likely_theft: { label: 'LIKELY THEFT', color: 'text-red-600', bg: 'bg-red-500/15' },
-  grab_and_run: { label: 'GRAB & RUN', color: 'text-red-700', bg: 'bg-red-600/20' },
-  partial_theft: { label: 'PARTIAL THEFT', color: 'text-orange-600', bg: 'bg-orange-500/15' },
-  likely_paid: { label: 'LIKELY PAID', color: 'text-emerald-600', bg: 'bg-emerald-500/15' },
-  under_review: { label: 'UNDER REVIEW', color: 'text-blue-600', bg: 'bg-blue-500/15' },
-  cleared: { label: 'CLEARED', color: 'text-gray-500', bg: 'bg-gray-500/15' },
-};
-
 function ClassificationBadge({ classification }: { classification?: string }) {
   if (!classification) return null;
-  const cfg = classificationConfig[classification] || classificationConfig.under_review;
+  const cfg = classificationLabel(classification);
   return (
-    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${cfg.bg} ${cfg.color}`}>
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.colorClasses}`}>
       {cfg.label}
     </span>
   );
@@ -418,8 +410,8 @@ function OffenderModal({
               </div>
               <p className="text-white/80 text-sm">
                 {offType === 'returning'
-                  ? `Known offender re-entered · ${alert.match_confidence ? `${Math.round((alert.match_confidence > 1 ? alert.match_confidence : alert.match_confidence * 100))}% match` : 'AI match confirmed'}`
-                  : `Theft detected this visit · ${alert.concealment_count || 0} item${(alert.concealment_count || 0) !== 1 ? 's' : ''} concealed`
+                  ? `This person has stolen before and just walked in · How sure: ${confidenceLabel(alert.match_confidence).label}`
+                  : `May have hidden ${alert.concealment_count || 0} item${(alert.concealment_count || 0) !== 1 ? 's' : ''} this visit`
                 }
               </p>
             </div>
@@ -513,11 +505,11 @@ function OffenderModal({
                       <div className="flex items-center justify-between">
                         <ClassificationBadge classification={alert.theft_classification} />
                         {alert.concealment_count && alert.concealment_count > 0 && (
-                          <span className="text-xs text-gray-500">{alert.concealment_count} item{alert.concealment_count > 1 ? 's' : ''} concealed</span>
+                          <span className="text-xs text-gray-500">may have hidden {alert.concealment_count} item{alert.concealment_count > 1 ? 's' : ''}</span>
                         )}
                       </div>
                       {alert.classification_reason && (
-                        <p className="mt-2 text-xs text-gray-500 leading-relaxed">{alert.classification_reason}</p>
+                        <p className="mt-2 text-xs text-gray-500 leading-relaxed">{plainEnglish(alert.classification_reason)}</p>
                       )}
                       {alert.visited_register !== undefined && (
                         <div className="mt-2 flex items-center gap-2">
@@ -588,7 +580,7 @@ function OffenderModal({
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {[
-                          { label: 'Match Confidence', value: alert.match_confidence ? `${Math.round((alert.match_confidence > 1 ? alert.match_confidence : alert.match_confidence * 100))}%` : 'N/A', color: 'text-blue-600' },
+                          { label: 'How Sure Is the Match', value: confidenceLabel(alert.match_confidence).label, color: 'text-blue-600' },
                           { label: 'Prior Thefts', value: person?.total_confirmed_thefts?.toString() || '0', color: 'text-red-600' },
                           { label: 'Total Visits', value: person?.total_visits?.toString() || '—', color: 'text-gray-700' },
                           { label: 'Status', value: person?.status?.replace(/_/g, ' ') || 'Unknown', color: person?.status === 'blacklisted' ? 'text-purple-600' : 'text-gray-700' },
@@ -730,19 +722,19 @@ function OffenderModal({
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
             <p className="text-sm text-gray-500">Choose an action:</p>
             <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-              <button onClick={() => handleAction('call_police')} disabled={!!actionLoading} className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-red-500/25">
+              <button onClick={() => handleAction('call_police')} disabled={!!actionLoading} className="flex items-center justify-center gap-2 px-6 min-h-[52px] w-full md:w-auto text-base bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-red-500/25">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
                 Contact Authorities
               </button>
-              <button onClick={() => handleAction('paid')} disabled={!!actionLoading} className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50">
+              <button onClick={() => handleAction('paid')} disabled={!!actionLoading} className="flex items-center justify-center gap-2 px-6 min-h-[52px] w-full md:w-auto text-base bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 Paid
               </button>
-              <button onClick={() => handleAction('release')} disabled={!!actionLoading} className="flex items-center gap-2 px-6 py-3 bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-all active:scale-95 disabled:opacity-50">
+              <button onClick={() => handleAction('release')} disabled={!!actionLoading} className="flex items-center justify-center gap-2 px-6 min-h-[52px] w-full md:w-auto text-base bg-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-300 transition-all active:scale-95 disabled:opacity-50">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>
                 Release
               </button>
-              <button onClick={() => handleAction('blacklist')} disabled={!!actionLoading} className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-all active:scale-95 disabled:opacity-50">
+              <button onClick={() => handleAction('blacklist')} disabled={!!actionLoading} className="flex items-center justify-center gap-2 px-6 min-h-[52px] w-full md:w-auto text-base bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-all active:scale-95 disabled:opacity-50">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
                 Blacklist
               </button>
@@ -884,7 +876,7 @@ export default function AlertsPage() {
           <div>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight mb-3">Live Alerts</h1>
             <p className="text-base text-[#86868B] leading-relaxed max-w-2xl">
-              Active in-store offender alerts. <strong className="text-orange-600">New offenders</strong> were just caught stealing this visit. <strong className="text-red-600">Returning offenders</strong> are previously identified thieves re-entering the store.
+              People in your store right now who need your attention. <strong className="text-orange-600">New</strong> means someone may have taken something this visit. <strong className="text-red-600">Returning</strong> means a known offender just walked back in.
             </p>
           </div>
           <div className="flex items-center gap-2 bg-white/80 backdrop-blur-xl rounded-full px-4 py-2 border border-gray-200/50 shrink-0 ml-4">
@@ -1055,13 +1047,13 @@ export default function AlertsPage() {
                         <><span className="text-gray-300">·</span><span className="font-semibold text-gray-700">{alert.person_display_name}</span></>
                       )}
                       {alert.match_confidence && (
-                        <><span className="text-gray-300">·</span><span className="text-blue-500">{Math.round((alert.match_confidence > 1 ? alert.match_confidence : alert.match_confidence * 100))}% match</span></>
+                        <><span className="text-gray-300">·</span><span className="text-blue-500">How sure: {confidenceLabel(alert.match_confidence).label}</span></>
                       )}
                       {alert.person_total_thefts !== undefined && alert.person_total_thefts > 0 && (
                         <><span className="text-gray-300">·</span><span className="text-red-500 font-semibold">{alert.person_total_thefts} prior theft{alert.person_total_thefts > 1 ? 's' : ''}</span></>
                       )}
                       {alert.concealment_count !== undefined && alert.concealment_count > 0 && (
-                        <><span className="text-gray-300">·</span><span className="text-orange-500">{alert.concealment_count} item{alert.concealment_count > 1 ? 's' : ''} concealed</span></>
+                        <><span className="text-gray-300">·</span><span className="text-orange-500">may have hidden {alert.concealment_count} item{alert.concealment_count > 1 ? 's' : ''}</span></>
                       )}
                     </div>
                   </div>

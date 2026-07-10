@@ -109,7 +109,7 @@ export default function OffendersPage() {
 
   const statusConfig: Record<string, { color: string; bg: string; label: string }> = {
     thief: { color: 'text-orange-400', bg: 'bg-orange-500/15', label: 'Confirmed Thief' },
-    blacklisted: { color: 'text-red-400', bg: 'bg-red-500/15', label: 'Blacklisted' },
+    blacklisted: { color: 'text-red-400', bg: 'bg-red-500/15', label: 'Banned' },
     suspected: { color: 'text-amber-500', bg: 'bg-amber-500/15', label: 'Suspected' },
     known: { color: 'text-blue-500', bg: 'bg-blue-500/15', label: 'Known' },
     unknown: { color: 'text-[#86868B]', bg: 'bg-gray-100', label: 'Unknown' },
@@ -200,7 +200,7 @@ export default function OffendersPage() {
             </div>
           </div>
           <p className="text-2xl font-bold text-red-400">{stats.blacklisted}</p>
-          <p className="text-xs text-[#86868B] mt-1">Blacklisted</p>
+          <p className="text-xs text-[#86868B] mt-1">Banned</p>
         </div>
       </div>
 
@@ -324,7 +324,7 @@ export default function OffendersPage() {
               </div>
               <div className="bg-gray-50 rounded-xl p-3 text-center">
                 <p className="text-lg font-bold text-gray-900">{selectedPerson.total_incidents || 0}</p>
-                <p className="text-[10px] text-[#86868B]">Incidents</p>
+                <p className="text-[10px] text-[#86868B]">Suspicious Activity</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-3 text-center">
                 <p className="text-lg font-bold text-red-400">{selectedPerson.total_confirmed_thefts || 0}</p>
@@ -387,7 +387,7 @@ export default function OffendersPage() {
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                   </svg>
-                  {actionLoading ? 'Processing...' : 'Blacklist'}
+                  {actionLoading ? 'Processing...' : 'Ban This Person'}
                 </button>
               ) : (
                 <button
@@ -398,7 +398,7 @@ export default function OffendersPage() {
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                   </svg>
-                  {actionLoading ? 'Processing...' : 'Remove from Blacklist'}
+                  {actionLoading ? 'Processing...' : 'Remove Ban'}
                 </button>
               )}
             </div>

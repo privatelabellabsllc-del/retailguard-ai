@@ -75,6 +75,8 @@ export interface Incident {
   concealment_count: number;
   clips: { id: string; clip_url: string; thumbnail_path?: string; duration_seconds: number; key_moment_offset?: number }[];
   detection_details?: Record<string, unknown>;
+  behavior_score?: number;
+  behavior_signals?: string;
   reviewed_at?: string;
   reviewed_by?: string;
   review_notes?: string;

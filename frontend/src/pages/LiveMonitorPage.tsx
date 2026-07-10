@@ -394,7 +394,7 @@ function TheftReviewModal({
               <ShieldIcon />
             </div>
             <div className="text-white">
-              <h2 className="font-bold text-lg">⚠️ Known Offender Detected</h2>
+              <h2 className="font-bold text-lg">Known Offender in Store</h2>
               <p className="text-red-100 text-sm">
                 {offender.person.display_name} · {offender.matchConfidence}% match · Entered {new Date(offender.enteredAt).toLocaleTimeString()}
               </p>
@@ -706,25 +706,25 @@ function TheftReviewModal({
           <div className="flex flex-wrap gap-3 justify-end">
             <button
               onClick={() => onAction('release')}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all"
+              className="px-6 min-h-[52px] rounded-xl text-base font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all"
             >
               Release
             </button>
             <button
               onClick={() => onAction('paid')}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all"
+              className="px-6 min-h-[52px] rounded-xl text-base font-semibold text-white bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all"
             >
-              💰 Paid
+              Paid
             </button>
             <button
               onClick={() => onAction('blacklist')}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-600/25 transition-all"
+              className="px-6 min-h-[52px] rounded-xl text-base font-semibold text-white bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-600/25 transition-all"
             >
-              🚫 Blacklist
+              Blacklist
             </button>
             <button
               onClick={() => onAction('police')}
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/25 transition-all flex items-center gap-2"
+              className="px-6 min-h-[52px] rounded-xl text-base font-semibold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/25 transition-all flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
